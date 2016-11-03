@@ -29,22 +29,20 @@ cpp_files := $(filter %.cpp,$(all_files))
 
 all: work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf
 
-work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf: work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
+work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf: bin/plot_tr.sh work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
 	mkdir -p $(@D)
-	awk '{print $$4 - $(Q)*$$6, $$5 - (1 - $(Q))*$$6}' $< |
-	grep -v inf |
-	$(GNUPLOT) -persist -e 'set term pdf ; set size ratio -1 ; plot "< cat" with dots' >| $@
+	GNUPLOT=$(GNUPLOT) $< $(Q) < $(word 2,$^) >| $@
 
 work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance: work/build/zaliapin_ben_zion_2013.exe work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
 	mkdir -p $(@D)
 	{
 	   echo $(B) $(DF)
-	   cat work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
+	   cat $(word 2,$^)
 	} | $< >| $@
 
 work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: zaliapin_ben_zion_2013.py work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
 	mkdir -p $(@D)
-	$(PYTHON) $< < work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q >| $@
+	$(PYTHON) $< < $(word 2,$^) >| $@
 
 # data
 
