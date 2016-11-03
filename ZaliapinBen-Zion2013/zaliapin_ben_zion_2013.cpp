@@ -1,11 +1,11 @@
-// Implement transformation method of Zaliapin and Ben-Zion (2016, JGR).
+// Implement transformation method of Zaliapin and Ben-Zion (2013, JGR).
 //
 // # Usage
 //     g++ -O3 -march=native -Wa,-q -o zaliapin_ben_zion_2013.exe zaliapin_ben_zion_2013.cpp -L/opt/local/lib -lGeographic
 //     { echo 1 1.6 ; cat catalog.tmyx ; } | time ./zaliapin_ben_zion_2013.exe | tee catalog.dists
 //
 // # Note
-// Distance eta can be -inf for earthquakes occurred at the same location.
+// Distance log(eta) can be -inf for earthquakes occurred at the same location.
 
 #include <iostream>
 #include <limits>
