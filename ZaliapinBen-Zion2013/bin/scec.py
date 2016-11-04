@@ -3,10 +3,6 @@
 
 import sys
 import datetime
-from math import hypot, inf, log, nan, sqrt
-
-import geographiclib.geodesic
-Inverse = geographiclib.geodesic.Geodesic.WGS84.Inverse
 
 
 def main(argv):
