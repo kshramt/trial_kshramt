@@ -25,3 +25,7 @@ You may need to edit `-I` and `-L` for your environment.
   url       = {http://doi.wiley.com/10.1002/jgrb.50179},
 }
 ```
+
+# License
+
+This program is distributed under the terms of [the GNU General Public License version 3](https://www.gnu.org/licenses/gpl-3.0.txt).
