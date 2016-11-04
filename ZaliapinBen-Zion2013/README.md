@@ -1,4 +1,4 @@
-Implementation of the transformation method of Zaliapin and Ben-Zion (2016, JGR).
+Implementation of the transformation method of Zaliapin and Ben-Zion (2013, JGR).
 
 # Usage
 
