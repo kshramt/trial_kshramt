@@ -59,7 +59,7 @@ auto lat_max_of(T lat1, T dlat, I i_bin){
 
 // aggressively try early return
 template<typename T, typename I>
-auto find_parent(vector<I>& is, vector<T>& ts, vector<T>& ms, vector<T>& lats, vector<T>& lons,
+auto find_parent(const vector<I>& is, const vector<T>& ts, const vector<T>& ms, const vector<T>& lats, const vector<T>& lons,
                  T tj, T latj, T lonj,
                  T m_max, T dlat_min,
                  I& n,
