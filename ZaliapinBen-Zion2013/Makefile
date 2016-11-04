@@ -33,12 +33,16 @@ work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_S
 	mkdir -p $(@D)
 	GNUPLOT=$(GNUPLOT) $< $(Q) < $(word 2,$^) >| $@
 
-work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance: work/build/zaliapin_ben_zion_2013.exe work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
+work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance: work/build/zaliapin_ben_zion_2013.exe work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in
+	mkdir -p $(@D)
+	$< < $(word 2,$^) >| $@
+
+work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in: work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
 	mkdir -p $(@D)
 	{
 	   echo $(B) $(DF)
-	   cat $(word 2,$^)
-	} | $< >| $@
+	   cat $<
+	} >| $@
 
 work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: zaliapin_ben_zion_2013.py work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
 	mkdir -p $(@D)
