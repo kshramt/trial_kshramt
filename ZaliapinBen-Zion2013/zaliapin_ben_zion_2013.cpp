@@ -188,7 +188,7 @@ int main(int argc, char* argv[]){
            << log_tij_best << "\t"
            << log_rij_best << "\t"
            << log_mi_best
-           << endl;
+           << "\n";
    }
 
    return 0;
