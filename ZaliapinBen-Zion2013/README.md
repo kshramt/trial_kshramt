@@ -1,5 +1,9 @@
 Implementation of the transformation method of Zaliapin and Ben-Zion (2013, JGR).
 
+This code implements O(N√N) algorithm and thus applicable to large catalogs.
+For example, this code took about 35 s on a notebook computer to process a catalog, which contains 20,000 events.
+This machine would process a catalog with 500,000 events in about 70 minutes (I have not tested, though).
+
 # Usage
 
 ```bash
