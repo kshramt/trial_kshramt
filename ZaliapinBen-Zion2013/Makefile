@@ -44,7 +44,7 @@ work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
 	   cat $<
 	} >| $@
 
-work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: zaliapin_ben_zion_2013.py work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
+work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: bin/scec.py work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
 	mkdir -p $(@D)
 	$(PYTHON) $< < $(word 2,$^) >| $@
 
