@@ -12,6 +12,7 @@ export SHELLOPTS := pipefail:errexit:nounset:noclobber
 
 # Specific to this project
 
+AWK := gawk
 GNUPLOT := gnuplot
 PYTHON := python3
 CXX := clang++
@@ -21,38 +22,44 @@ N_EVENTS := 10000
 B := 1
 DF := 1.6
 Q := 0.5
+MC := -100
 
 all_files := $(shell git ls-files)
 cpp_files := $(filter %.cpp,$(all_files))
 
 # run
 
-all: work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf
+all: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf
+all: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.eta.pdf
 
-work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf: bin/plot_tr.sh work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
+work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.eta.pdf: bin/plot_eta.py work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
+	mkdir -p $(@D)
+	$(PYTHON) $< < $(word 2,$^) >| $@
+
+work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf: bin/plot_tr.sh work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
 	mkdir -p $(@D)
 	GNUPLOT=$(GNUPLOT) $< $(Q) < $(word 2,$^) >| $@
 
-work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance: work/build/zaliapin_ben_zion_2013.exe work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in
+%.distance: work/build/zaliapin_ben_zion_2013.exe %.in
 	mkdir -p $(@D)
 	$< < $(word 2,$^) >| $@
 
-work/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in: work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
+work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in: work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
 	mkdir -p $(@D)
 	{
 	   echo $(B) $(DF)
-	   cat $<
+	   tail -n$(N_EVENTS) $<
 	} >| $@
 
-work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: bin/scec.py work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
+work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
+	mkdir -p $(@D)
+	$(AWK) '$$2 >= $(MC)' $< >| $@
+
+work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: bin/scec.py cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
 	mkdir -p $(@D)
 	$(PYTHON) $< < $(word 2,$^) >| $@
 
 # data
-
-work/n_events~$(N_EVENTS)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q: cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
-	mkdir -p $(@D)
-	tail -n$(N_EVENTS) $< >| $@
 
 cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q:
 	mkdir -p $(@D)
