@@ -170,8 +170,9 @@ int main(int argc, char* argv[]){
 
       // search outward for efficient fast returns
       for(long delta_current_bin = 1; delta_current_bin < n_bins; delta_current_bin++){
-         long direction = -1;
+         long direction = 1;
          for(long rep = 0; rep < 2; rep++){ // backward and forward
+            direction *= -1;
             auto i_bin = current_bin + direction*delta_current_bin;
             if(i_bin < 0 || n_bins <= i_bin){
                continue;
@@ -184,7 +185,6 @@ int main(int argc, char* argv[]){
                         i_best, log_etaij_best, log_tij_best, log_rij_best, log_mi_best,
                         b, df
                         );
-            direction *= -1;
          }
       }
 
