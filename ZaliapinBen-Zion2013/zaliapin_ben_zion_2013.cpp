@@ -10,6 +10,7 @@
 #include <cassert>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <tuple>
 #include <sstream>
 #include <string>
@@ -43,18 +44,85 @@ auto r_of(T lat1, T lon1, T lat2, T lon2){
 }
 
 template<typename T>
-auto i_bin_of(T x, T x_min, T dx){
-   return max(long(ceil((x - x_min)/dx) - 1), long(0));
+auto sortperm(const vector<T>& xs){
+   vector<size_t> inds(xs.size());
+   iota(inds.begin(), inds.end(), 0);
+   sort(inds.begin(), inds.end(),
+        [&xs](auto i1, auto i2){return xs[i1] < xs[i2];});
+   return inds;
 }
 
 template<typename T, typename I>
-auto lat_min_of(T lat1, T dlat, I i_bin){
-   return lat1 + dlat*i_bin;
+auto sort_by_inds(vector<T>& xs, vector<I>& inds){
+   assert(xs.size() == inds.size());
+   vector<T> ret(xs.size());
+   for(size_t i = 0; i < inds.size(); i++){
+      ret[i] = xs[inds[i]];
+   }
+   return ret;
 }
 
 template<typename T, typename I>
-auto lat_max_of(T lat1, T dlat, I i_bin){
-   return lat1 + dlat*(i_bin + 1);
+auto adaptive_split(
+                    const vector<T>& ts, const vector<T>& ms, const vector<T>& lats, const vector<T>& lons,
+                    vector<vector<I>>& ibins, vector<vector<T>>& tbins, vector<vector<T>>& mbins, vector<vector<T>>& latbins, vector<vector<T>>& lonbins, // ibins[i_bin][i_i_bin] -> i_event
+                    vector<I>& n_list, vector<T>& m_max_list, vector<T>& lat_min_list, vector<T>& lat_max_list, // xs[i_bin] -> x at i_bin
+                    vector<I>& i_bin_list // i_bin_list[i_event] -> i_bin of i_event
+                    ){
+   long n = ts.size();
+   assert(ms.size() == n &&
+          lats.size() == n &&
+          lons.size() == n &&
+          i_bin_list.size() == n
+          );
+   long n_bins = ibins.size();
+   assert(tbins.size() == n_bins &&
+          mbins.size() == n_bins &&
+          latbins.size() == n_bins &&
+          lonbins.size() == n_bins &&
+          m_max_list.size() == n_bins &&
+          lat_min_list.size() == n_bins &&
+          lat_max_list.size() == n_bins
+          );
+
+   long n_per_bin = n/n_bins;
+   long reminders = n - n_bins*n_per_bin;
+   for(auto i_bin = 0; i_bin < n_bins; i_bin++){
+      long plusone = 0;
+      if(reminders > 0){
+         plusone = 1;
+         reminders -= 1;
+      }
+      n_list[i_bin] = n_per_bin + plusone;
+   }
+
+   auto lat_inds = sortperm(lats);
+   long i_lat = -1;
+   for(long i_bin = 0; i_bin < n_bins; i_bin++){
+      if(n_list[i_bin] > 0){
+         for(long i_tmp = 0; i_tmp < n_list[i_bin]; i_tmp++){
+            i_lat += 1;
+            auto i = lat_inds[i_lat];
+            ibins[i_bin].push_back(i);
+            tbins[i_bin].push_back(ts[i]);
+            mbins[i_bin].push_back(ms[i]);
+            latbins[i_bin].push_back(lats[i]);
+            lonbins[i_bin].push_back(lons[i]);
+            i_bin_list[i] = i_bin;
+         }
+         lat_min_list[i_bin] = latbins[i_bin][0];
+         lat_max_list[i_bin] = latbins[i_bin][latbins[i_bin].size() - 1];
+         m_max_list[i_bin] = *max_element(mbins[i_bin].begin(), mbins[i_bin].end());
+         // sort vectors inside bin by t
+         auto t_inds = sortperm(tbins[i_bin]);
+         ibins[i_bin] = sort_by_inds(ibins[i_bin], t_inds);
+         tbins[i_bin] = sort_by_inds(tbins[i_bin], t_inds);
+         mbins[i_bin] = sort_by_inds(mbins[i_bin], t_inds);
+         latbins[i_bin] = sort_by_inds(latbins[i_bin], t_inds);
+         lonbins[i_bin] = sort_by_inds(lonbins[i_bin], t_inds);
+      }
+   }
+   assert(i_lat == n - 1);
 }
 
 // aggressively try early return
@@ -123,33 +191,26 @@ int main(int argc, char* argv[]){
       lats.push_back(lat);
       lons.push_back(lon);
    }
-   auto lat_min = *min_element(lats.begin(), lats.end());
-   auto lat_max = *max_element(lats.begin(), lats.end());
-   assert((-90 <= lat_min) && (lat_min < lat_max) && (lat_max <= 90));
+   { // sanity check
+      auto lat_min = *min_element(lats.begin(), lats.end());
+      auto lat_max = *max_element(lats.begin(), lats.end());
+      assert((-90 <= lat_min) && (lat_min < lat_max) && (lat_max <= 90));
+   }
 
    long n = ts.size();
    long n_bins = ceil(sqrt(n));
-   vector<long> nbins(n_bins);
+   vector<long> n_list(n_bins);
    vector<vector<long>> ibins(n_bins);
    vector<vector<double>> tbins(n_bins), mbins(n_bins), latbins(n_bins), lonbins(n_bins);
-   vector<double> m_max_list(n_bins);
-   auto dlat = (lat_max - lat_min)/n_bins;
-   for(long i = 0; i < n; i++){
-      auto i_bin = i_bin_of(lats[i], lat_min, dlat);
-      ibins[i_bin].push_back(i);
-      tbins[i_bin].push_back(ts[i]);
-      mbins[i_bin].push_back(ms[i]);
-      latbins[i_bin].push_back(lats[i]);
-      lonbins[i_bin].push_back(lons[i]);
-   }
-   for(long i_bin = 0; i_bin < n_bins; i_bin++){
-      nbins[i_bin] = mbins[i_bin].size();
-      if(nbins[i_bin] > 0){
-         m_max_list[i_bin] = *max_element(mbins[i_bin].begin(), mbins[i_bin].end());
-      }else{
-         m_max_list[i_bin] = 0; // not used anyway
-      }
-   }
+   vector<double> m_max_list(n_bins), lat_min_list(n_bins), lat_max_list(n_bins);
+   vector<long> i_bin_list(n);
+
+   adaptive_split(
+                  ts, ms, lats, lons,
+                  ibins, tbins, mbins, latbins, lonbins,
+                  n_list, m_max_list, lat_min_list, lat_max_list,
+                  i_bin_list
+                  );
 
    // output distances
    for(long j = ts.size() - 1; j > 0; j--){
@@ -158,12 +219,12 @@ int main(int argc, char* argv[]){
       auto log_rij_best = numeric_limits<double>::infinity();
       auto log_mi_best = -numeric_limits<double>::infinity();
       long i_best = -1;
-      auto current_bin = i_bin_of(lats[j], lat_min, dlat);
+      auto current_bin = i_bin_list[j];
       // I am expecting that the parent of j is inside current_bin
       find_parent(ibins[current_bin], tbins[current_bin], mbins[current_bin], latbins[current_bin], lonbins[current_bin],
                   ts[j], lats[j], lons[j],
                   m_max_list[current_bin], double(0),
-                  nbins[current_bin],
+                  n_list[current_bin],
                   i_best, log_etaij_best, log_tij_best, log_rij_best, log_mi_best,
                   b, df
                   );
@@ -177,11 +238,11 @@ int main(int argc, char* argv[]){
             if(i_bin < 0 || n_bins <= i_bin){
                continue;
             }
-            auto minimum_delta_lat = direction > 0 ? lat_min_of(lat_min, dlat, i_bin) - lats[j] : lat_max_of(lat_min, dlat, i_bin) - lats[j];
+            auto minimum_delta_lat = direction > 0 ? lat_min_list[i_bin] - lats[j] : lat_max_list[i_bin] - lats[j];
             find_parent(ibins[i_bin], tbins[i_bin], mbins[i_bin], latbins[i_bin], lonbins[i_bin],
                         ts[j], lats[j], lons[j],
                         m_max_list[i_bin], minimum_delta_lat,
-                        nbins[i_bin],
+                        n_list[i_bin],
                         i_best, log_etaij_best, log_tij_best, log_rij_best, log_mi_best,
                         b, df
                         );
