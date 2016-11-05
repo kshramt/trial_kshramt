@@ -97,6 +97,11 @@ auto find_parent(const vector<I>& is, const vector<T>& ts, const vector<T>& ms, 
 }
 
 int main(int argc, char* argv[]){
+   cout.setf(ios_base::scientific, ios_base::floatfield);
+   cout.precision(numeric_limits<double>::max_digits10);
+   cerr.setf(ios_base::scientific, ios_base::floatfield);
+   cerr.precision(numeric_limits<double>::max_digits10);
+
    // read params
    double b, df;
    {
@@ -147,10 +152,6 @@ int main(int argc, char* argv[]){
    }
 
    // output distances
-   cout.setf(ios_base::scientific, ios_base::floatfield);
-   cout.precision(numeric_limits<double>::max_digits10);
-   // cerr.setf(ios_base::scientific, ios_base::floatfield);
-   // cerr.precision(numeric_limits<double>::max_digits10);
    for(long j = ts.size() - 1; j > 0; j--){
       auto log_etaij_best = numeric_limits<double>::infinity();
       auto log_tij_best = numeric_limits<double>::infinity();
