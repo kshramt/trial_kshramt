@@ -99,7 +99,12 @@ auto find_parent(const vector<I>& is, const vector<T>& ts, const vector<T>& ms, 
 int main(int argc, char* argv[]){
    // read params
    double b, df;
-   cin >> b >> df;
+   {
+      string line;
+      assert(getline(cin, line));
+      istringstream iss(line);
+      iss >> b >> df;
+   }
 
    // read data
    vector<double> ts, ms, lats, lons;
