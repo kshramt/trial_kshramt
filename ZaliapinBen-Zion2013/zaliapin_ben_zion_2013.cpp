@@ -188,12 +188,14 @@ int main(int argc, char* argv[]){
          }
       }
 
-      cout << j << "\t"
-           << i_best << "\t"
-           << log_etaij_best << "\t"
-           << log_tij_best << "\t"
-           << log_rij_best << "\t"
-           << log_mi_best
+      cout << j
+           << "\t" << i_best
+           << "\t" << log_etaij_best
+           << "\t" << log_tij_best
+           << "\t" << log_rij_best
+           << "\t" << log_mi_best
+           << "\t" << ts[j] << "\t" << ms[j] << "\t" << lats[j] << "\t" << lons[j]
+           << "\t" << ts[i_best] << "\t" << ms[i_best] << "\t" << lats[i_best] << "\t" << lons[i_best]
            << "\n";
    }
 
