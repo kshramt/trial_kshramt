@@ -42,7 +42,7 @@ work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A
 
 %.distance: work/build/zaliapin_ben_zion_2013.exe %.in
 	mkdir -p $(@D)
-	$< < $(word 2,$^) >| $@
+	time $< < $(word 2,$^) >| $@
 
 work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in: work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
 	mkdir -p $(@D)
