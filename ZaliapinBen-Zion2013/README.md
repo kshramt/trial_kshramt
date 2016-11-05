@@ -4,11 +4,11 @@ This code implements an O(N√N) algorithm and thus applicable to large catalogs
 Here are some numbers:
 
 ```
-     N  time (s)
- 20000       6.5
- 40000      17.9
- 80000      53.4
-500000    1121.6
+     N  Time (s)  Command
+ 20000       6.5  make N_EVENTS=20000
+ 40000      17.9  make N_EVENTS=40000
+ 80000      53.4  make N_EVENTS=80000
+500000    1121.6  make N_EVENTS=500000
 ```
 
 # Usage
