@@ -4,6 +4,8 @@
 import sys
 import math
 
+import matplotlib
+matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 
 
