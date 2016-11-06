@@ -1,6 +1,6 @@
 Implementation of the transformation method of Zaliapin and Ben-Zion (2013, JGR).
 
-This code implements an O(N√N) algorithm and thus applicable to large catalogs.
+This code implements an O(N√N) algorithm and thus is applicable to large catalogs.
 Here are some numbers:
 
 ```
