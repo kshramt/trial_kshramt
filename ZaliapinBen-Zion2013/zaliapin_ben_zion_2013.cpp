@@ -69,13 +69,13 @@ auto adaptive_split(
                     vector<I>& n_list, vector<T>& m_max_list, vector<T>& lat_min_list, vector<T>& lat_max_list, // xs[i_bin] -> x at i_bin
                     vector<I>& i_bin_list // i_bin_list[i_event] -> i_bin of i_event
                     ){
-   long n = ts.size();
+   int n = ts.size();
    assert(ms.size() == n &&
           lats.size() == n &&
           lons.size() == n &&
           i_bin_list.size() == n
           );
-   long n_bins = ibins.size();
+   int n_bins = ibins.size();
    assert(tbins.size() == n_bins &&
           mbins.size() == n_bins &&
           latbins.size() == n_bins &&
@@ -85,10 +85,10 @@ auto adaptive_split(
           lat_max_list.size() == n_bins
           );
 
-   long n_per_bin = n/n_bins;
-   long reminders = n - n_bins*n_per_bin;
+   int n_per_bin = n/n_bins;
+   int reminders = n - n_bins*n_per_bin;
    for(auto i_bin = 0; i_bin < n_bins; i_bin++){
-      long plusone = 0;
+      int plusone = 0;
       if(reminders > 0){
          plusone = 1;
          reminders -= 1;
@@ -97,10 +97,10 @@ auto adaptive_split(
    }
 
    auto lat_inds = sortperm(lats);
-   long i_lat = -1;
-   for(long i_bin = 0; i_bin < n_bins; i_bin++){
+   int i_lat = -1;
+   for(int i_bin = 0; i_bin < n_bins; i_bin++){
       if(n_list[i_bin] > 0){
-         for(long i_tmp = 0; i_tmp < n_list[i_bin]; i_tmp++){
+         for(int i_tmp = 0; i_tmp < n_list[i_bin]; i_tmp++){
             i_lat += 1;
             auto i = lat_inds[i_lat];
             ibins[i_bin].push_back(i);
@@ -137,7 +137,7 @@ auto find_parent(const vector<I>& is, const vector<T>& ts, const vector<T>& ms, 
    auto log_mi_possible_shortest = log_m_term(m_max, b);
    auto log_rij_possible_shortest = log_r_term(r_of(latj + dlat_min, lonj, latj, lonj), df);
    T log_tij_pre = -numeric_limits<T>::infinity();
-   for(long i = n - 1; i > -1; i--){
+   for(int i = n - 1; i > -1; i--){
       if(ts[i] >= tj){
          n -= 1;
          continue;
@@ -197,13 +197,13 @@ int main(int argc, char* argv[]){
       assert((-90 <= lat_min) && (lat_min < lat_max) && (lat_max <= 90));
    }
 
-   long n = ts.size();
-   long n_bins = ceil(sqrt(n));
-   vector<long> n_list(n_bins);
-   vector<vector<long>> ibins(n_bins);
+   int n = ts.size();
+   int n_bins = ceil(sqrt(n));
+   vector<int> n_list(n_bins);
+   vector<vector<int>> ibins(n_bins);
    vector<vector<double>> tbins(n_bins), mbins(n_bins), latbins(n_bins), lonbins(n_bins);
    vector<double> m_max_list(n_bins), lat_min_list(n_bins), lat_max_list(n_bins);
-   vector<long> i_bin_list(n);
+   vector<int> i_bin_list(n);
 
    adaptive_split(
                   ts, ms, lats, lons,
@@ -213,12 +213,12 @@ int main(int argc, char* argv[]){
                   );
 
    // output distances
-   for(long j = ts.size() - 1; j > 0; j--){
+   for(int j = ts.size() - 1; j > 0; j--){
       auto log_etaij_best = numeric_limits<double>::infinity();
       auto log_tij_best = numeric_limits<double>::infinity();
       auto log_rij_best = numeric_limits<double>::infinity();
       auto log_mi_best = -numeric_limits<double>::infinity();
-      long i_best = -1;
+      int i_best = -1;
       auto current_bin = i_bin_list[j];
       // I am expecting that the parent of j is inside current_bin
       find_parent(ibins[current_bin], tbins[current_bin], mbins[current_bin], latbins[current_bin], lonbins[current_bin],
@@ -230,9 +230,9 @@ int main(int argc, char* argv[]){
                   );
 
       // search outward for efficient fast returns
-      for(long delta_current_bin = 1; delta_current_bin < n_bins; delta_current_bin++){
-         long direction = 1;
-         for(long rep = 0; rep < 2; rep++){ // backward and forward
+      for(int delta_current_bin = 1; delta_current_bin < n_bins; delta_current_bin++){
+         int direction = 1;
+         for(int rep = 0; rep < 2; rep++){ // backward and forward
             direction *= -1;
             auto i_bin = current_bin + direction*delta_current_bin;
             if(i_bin < 0 || n_bins <= i_bin){
