@@ -14,7 +14,9 @@ Here are some numbers:
 # Usage
 
 ```bash
-make
+make          # build ./zaliapin_ben_zion_2013.exe
+make plot     # plot figures
+make check    # run test cases
 ```
 
 You may need to edit `-I` and `-L` for your environment.

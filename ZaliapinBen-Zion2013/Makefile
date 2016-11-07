@@ -27,10 +27,11 @@ MC := -100
 all_files := $(shell git ls-files)
 cpp_files := $(filter %.cpp,$(all_files))
 
-# run
+# plot
 
-all: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf
-all: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.eta.pdf
+.PHONY: plot
+plot: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf
+plot: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.eta.pdf
 
 work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.eta.pdf: bin/plot_eta.py work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
 	mkdir -p $(@D)
@@ -59,6 +60,19 @@ work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: bin/scec.py cache/hs_1981_2016
 	mkdir -p $(@D)
 	$(PYTHON) $< < $(word 2,$^) >| $@
 
+# check
+
+.PHONY: check
+check: test/syn.done
+test/%.done: bin/allclose.py test/%.out test/%.expect
+	mkdir -p $(@D)
+	$(PYTHON) $^
+	touch $@
+
+test/%.out: zaliapin_ben_zion_2013.exe test/%.in
+	mkdir -p $(@D)
+	$(abspath $<) < $(word 2,$^) >| $@
+
 # data
 
 cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q:
@@ -67,6 +81,10 @@ cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q:
 	wget http://scedc.caltech.edu/ftp/catalogs/hauksson/Socal_DD/$(@F)
 
 # CXX
+
+all: zaliapin_ben_zion_2013.exe
+zaliapin_ben_zion_2013.exe: work/build/zaliapin_ben_zion_2013.exe
+	cp -f $< $@
 
 %.exe: %.o
 	mkdir -p $(@D)
