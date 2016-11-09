@@ -161,6 +161,14 @@ auto find_parent(const vector<I>& is, const vector<T>& ts, const vector<T>& ms, 
 }
 
 int main(int argc, char* argv[]){
+   if(argc > 1){
+      cerr << "{\n"
+           << "   echo $B $DF\n"
+           << "   cat catalog.T_M_Lat°_Lon°\n"
+           << "} | " << argv[0] << " > distance.j_i_logηij_logTij_logRij_logMi_and_more"
+           << endl;
+      exit(1);
+   }
    cout.setf(ios_base::scientific, ios_base::floatfield);
    cout.precision(numeric_limits<double>::max_digits10);
    cerr.setf(ios_base::scientific, ios_base::floatfield);
