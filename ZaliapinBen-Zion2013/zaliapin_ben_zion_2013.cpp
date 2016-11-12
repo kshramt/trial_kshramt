@@ -7,7 +7,6 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
-#include <tuple>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -124,11 +123,11 @@ auto adaptive_split(
 // aggressively try early return
 template<typename T, typename I>
 auto find_parent(const vector<I>& is, const vector<T>& ts, const vector<T>& ms, const vector<T>& lats, const vector<T>& lons,
-                 T tj, T latj, T lonj,
-                 T m_max, T dlat_min,
+                 const T tj, const T latj, const T lonj,
+                 const T m_max, const T dlat_min,
                  I& n,
                  I& i_best, T& log_etaij_best, T& log_tij_best, T& log_rij_best, T& log_mi_best,
-                 T b, T df
+                 const T b, const T df
                  ){
    auto log_mi_possible_shortest = log_m_term(m_max, b);
    auto log_rij_possible_shortest = log_r_term(r_of(latj + dlat_min, lonj, latj, lonj), df);
@@ -190,15 +189,11 @@ int main(int argc, char* argv[]){
       istringstream iss(line);
       double t, m, lat, lon;
       iss >> t >> m >> lat >> lon;
+      assert((-90 <= lat) && (lat <= 90));
       ts.push_back(t);
       ms.push_back(m);
       lats.push_back(lat);
       lons.push_back(lon);
-   }
-   { // sanity check
-      auto lat_min = *min_element(lats.begin(), lats.end());
-      auto lat_max = *max_element(lats.begin(), lats.end());
-      assert((-90 <= lat_min) && (lat_min < lat_max) && (lat_max <= 90));
    }
 
    int n = ts.size();
@@ -259,8 +254,14 @@ int main(int argc, char* argv[]){
            << "\t" << log_tij_best
            << "\t" << log_rij_best
            << "\t" << log_mi_best
-           << "\t" << ts[j] << "\t" << ms[j] << "\t" << lats[j] << "\t" << lons[j]
-           << "\t" << ts[i_best] << "\t" << ms[i_best] << "\t" << lats[i_best] << "\t" << lons[i_best]
+           << "\t" << ts[j]
+           << "\t" << ms[j]
+           << "\t" << lats[j]
+           << "\t" << lons[j]
+           << "\t" << ts[i_best]
+           << "\t" << ms[i_best]
+           << "\t" << lats[i_best]
+           << "\t" << lons[i_best]
            << "\n";
    }
 
