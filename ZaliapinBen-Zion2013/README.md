@@ -1,4 +1,4 @@
-Implementation of the transformation method of Zaliapin and Ben-Zion (2013, JGR).
+An implementation of the transformation method of Zaliapin and Ben-Zion (2013, JGR).
 
 This code implements an O(N√N) algorithm and thus is applicable to large catalogs.
 Here are some numbers:
@@ -14,7 +14,7 @@ Here are some numbers:
 # Usage
 
 ```bash
-make          # build ./zaliapin_ben_zion_2013.exe
+make all      # build ./zaliapin_ben_zion_2013.exe
 make plot     # plot figures
 make check    # run test cases
 ```
