@@ -41,9 +41,9 @@ work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A
 	mkdir -p $(@D)
 	GNUPLOT=$(GNUPLOT) $< $(Q) < $(word 2,$^) >| $@
 
-%.distance: work/build/zaliapin_ben_zion_2013.exe %.in
+%.distance: zaliapin_ben_zion_2013.exe %.in
 	mkdir -p $(@D)
-	time $< < $(word 2,$^) >| $@
+	time $(abspath $<) < $(word 2,$^) >| $@
 
 work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in: work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
 	mkdir -p $(@D)
