@@ -31,11 +31,16 @@ cpp_files := $(filter %.cpp,$(all_files))
 
 .PHONY: plot
 plot: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf
+plot: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr_hist.pdf
 plot: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.eta.pdf
 
 work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.eta.pdf: bin/plot_eta.py work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
 	mkdir -p $(@D)
 	$(PYTHON) $< < $(word 2,$^) >| $@
+
+work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr_hist.pdf: bin/plot_tr_hist.py work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
+	mkdir -p $(@D)
+	$(PYTHON) $< $(Q) < $(word 2,$^) >| $@
 
 work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tr.pdf: bin/plot_tr.sh work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance
 	mkdir -p $(@D)
