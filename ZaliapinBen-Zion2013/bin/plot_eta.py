@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 def main(argv):
     if len(argv) != 1:
         usage_and_exit()
+    plt.rcParams['mathtext.fontset'] = 'stix'
+
     f, a = plt.subplots()
     log_etas = [x for x in load(sys.stdin) if math.isfinite(x)]
     a.hist(
@@ -21,6 +23,8 @@ def main(argv):
         histtype='stepfilled',
         linewidth=0.5,
     )
+    a.set_xlabel(r'$\log{\eta}$')
+    a.set_ylabel(r'Frequency')
     f.savefig(
         sys.stdout.buffer,
         format='pdf',
