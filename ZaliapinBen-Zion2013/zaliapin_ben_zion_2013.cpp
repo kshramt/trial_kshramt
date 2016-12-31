@@ -145,6 +145,10 @@ auto find_parent(const vector<I>& is, const vector<T>& ts, const vector<T>& ms, 
       }
       const auto log_mi = log_m_term(ms[i], b);
       assert(log_mi <= log_mi_possible_shortest);
+      // try to `continue` without costly distance calculation.
+      if(log_tij + log_rij_possible_shortest - log_mi >= log_etaij_best){
+         continue;
+      }
       const auto log_rij = log_r_term(r_of(lats[i], lons[i], latj, lonj), df);
       assert(log_rij >= log_rij_possible_shortest);
       const auto log_etaij = log_tij + log_rij - log_mi;
