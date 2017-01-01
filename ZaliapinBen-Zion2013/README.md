@@ -1,14 +1,14 @@
-An implementation of the transformation method of Zaliapin and Ben-Zion (2013, JGR).
+An implementation of Zaliapin and Ben-Zion (2013, JGR).
 
-This code implements an O(N√N) algorithm and thus is applicable to large catalogs.
-Here are some numbers:
+This code implements an O(N^3/2^) algorithm and thus is applicable to large catalogs.
+A benchmark result is as follows.
 
 ```
      N  Time (s)  Command
- 20000       6.5  make N_EVENTS=20000
- 40000      17.9  make N_EVENTS=40000
- 80000      53.4  make N_EVENTS=80000
-500000    1121.6  make N_EVENTS=500000
+ 20000       3.2  make N_EVENTS=20000
+ 40000       8.5  make N_EVENTS=40000
+ 80000      22.7  make N_EVENTS=80000
+500000     334.1  make N_EVENTS=500000
 ```
 
 # Usage
@@ -19,7 +19,8 @@ make plot     # plot figures
 make check    # run test cases
 ```
 
-You may need to edit `-I` and `-L` for your environment.
+This code uses [GeographicLib](http://geographiclib.sourceforge.net/) to compute distances between events.
+You may need to edit `-I` and `-L` in `Makefile` for your environment.
 
 # References
 
