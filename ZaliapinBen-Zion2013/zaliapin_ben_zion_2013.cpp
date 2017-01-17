@@ -1,7 +1,10 @@
-// Implement transformation method of Zaliapin and Ben-Zion (2013, JGR).
+// An implementation of Zaliapin and Ben-Zion (2013, JGR, http://doi.wiley.com/10.1002/jgrb.50179).
 //
 // # Note
 // Distance log(eta) can be -inf for earthquakes occurred at the same location.
+//
+// # License
+// This program is distributed under the terms of the GNU General Public License version 3 (https://www.gnu.org/licenses/gpl-3.0.txt).
 
 #include <cassert>
 #include <iostream>

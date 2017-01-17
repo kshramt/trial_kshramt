@@ -1,4 +1,4 @@
-An implementation of Zaliapin and Ben-Zion (2013, JGR).
+An implementation of [Zaliapin and Ben-Zion (2013, JGR)](http://doi.wiley.com/10.1002/jgrb.50179).
 
 This code implements an O(N√N) algorithm and thus is applicable to large catalogs.
 A benchmark result is as follows.
@@ -21,6 +21,9 @@ make check    # run test cases
 
 This code uses [GeographicLib](http://geographiclib.sourceforge.net/) to compute distances between events.
 You may need to edit `-I` and `-L` in `Makefile` for your environment.
+
+You need a C++ compiler that supports C++14 features.
+I checked that the code compiles with `clang++-3.8` and `clang++-3.9.1`.
 
 # References
 
