@@ -43,6 +43,10 @@ I checked that the code compiles with `clang++-3.8` and `clang++-3.9.1`.
 }
 ```
 
+# Other implementations
+
+- [USGS's MATLAB implementation](https://github.com/usgs/CatStat/blob/e474632893b36021ee3ea67831346c9cd91fa377/QCreport/Cluster_Detection.m)
+
 # License
 
 This program is distributed under the terms of [the GNU General Public License version 3](https://www.gnu.org/licenses/gpl-3.0.txt).
