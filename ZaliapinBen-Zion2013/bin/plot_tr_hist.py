@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 def main(argv):
     if len(argv) != 2:
-        usage_and_exit()
+        _usage_and_exit()
     q = float(argv[1])
     f, a = plt.subplots()
     xs = []

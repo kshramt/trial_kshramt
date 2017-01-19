@@ -8,7 +8,7 @@ import numpy as np
 
 def main(argv):
     if len(argv) != 3:
-        usage_and_exit()
+        _usage_and_exit()
     actual = np.loadtxt(argv[1])
     expected = np.loadtxt(argv[2])
     if np.allclose(actual, expected):

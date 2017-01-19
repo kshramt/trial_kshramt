@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 def main(argv):
     if len(argv) != 1:
-        usage_and_exit()
+        _usage_and_exit()
     plt.rcParams['mathtext.fontset'] = 'stix'
 
     f, a = plt.subplots()
