@@ -1,7 +1,7 @@
 // An implementation of Zaliapin and Ben-Zion (2013, JGR, http://doi.wiley.com/10.1002/jgrb.50179).
 //
 // # Note
-// Distance log(eta) can be -inf for earthquakes occurred at the same location.
+// Distance log10(eta) can be -inf for earthquakes occurred at the same location.
 //
 // # License
 // This program is distributed under the terms of the GNU General Public License version 3 (https://www.gnu.org/licenses/gpl-3.0.txt).
@@ -21,24 +21,24 @@ const auto wgs84 = GeographicLib::Geodesic::WGS84();
 
 template<typename M, typename B>
 auto log_m_term(const M m, const B b){
-   return b*m*log(10);
+   return b*m;
 }
 
 template<typename T>
 auto log_t_term(const T t){
-   return log(t);
+   return log10(t);
 }
 
 template<typename R, typename DF>
 auto log_r_term(const R r, const DF df){
-   return df*log(r);
+   return df*log10(r);
 }
 
 template<typename T>
 auto r_of(const T lat1, const T lon1, const T lat2, const T lon2){
    T s12 = -999;
    wgs84.Inverse(lat1, lon1, lat2, lon2, s12);
-   return s12;
+   return s12/1000; // m -> km
 }
 
 template<typename T>
