@@ -46,7 +46,15 @@ work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/q~$(Q)/hs_1981_2016_comb_K4_A
 	mkdir -p $(@D)
 	GNUPLOT=$(GNUPLOT) $< $(Q) < $(word 2,$^) >| $@
 
+.PHONY: diff
+diff: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.distance work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q_ref.distance
+	diff <(sort -k1 -g $(word 1,$^)) <(sort -k1 -g $(word 2,$^))
+
 %.distance: zaliapin_ben_zion_2013.exe %.in
+	mkdir -p $(@D)
+	time $(abspath $<) < $(word 2,$^) >| $@
+
+%_ref.distance: zaliapin_ben_zion_2013_ref.exe %.in
 	mkdir -p $(@D)
 	time $(abspath $<) < $(word 2,$^) >| $@
 
@@ -88,7 +96,7 @@ cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q:
 # CXX
 
 all: zaliapin_ben_zion_2013.exe
-zaliapin_ben_zion_2013.exe: work/build/zaliapin_ben_zion_2013.exe
+%.exe: work/build/%.exe
 	cp -f $< $@
 
 %.exe: %.o
