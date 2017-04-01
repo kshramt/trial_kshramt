@@ -37,7 +37,7 @@ def main(argv):
     with open(args.forest_yaml, "w") as fp:
         yaml.dump(
             forest,
-            sys.stdout,
+            fp,
             explicit_start=True,
             default_flow_style=False,
             width=2**31,
