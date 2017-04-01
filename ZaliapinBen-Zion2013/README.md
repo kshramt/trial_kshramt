@@ -36,21 +36,7 @@ I checked that the code compiles with `clang++-3.8` and `clang++-3.9.1`.
 
 # References
 
-```bib
-@Article{ZaliapinBen-Zion2013,
-  author    = {Zaliapin, Ilya and Ben-Zion, Yehuda},
-  title     = {{Earthquake clusters in southern California I: Identification and stability}},
-  journal   = {Journal of Geophysical Research: Solid Earth},
-  year      = {2013},
-  volume    = {118},
-  number    = {6},
-  pages     = {2847--2864},
-  month     = {jun},
-  doi       = {10.1002/jgrb.50179},
-  issn      = {21699313},
-  url       = {http://doi.wiley.com/10.1002/jgrb.50179},
-}
-```
+- Zaliapin, Ilya and Ben-Zion, Yehuda, 2013, Earthquake clusters in southern California I: Identification and stability, Journal of Geophysical Research: Solid Earth, [doi:10.1002/jgrb.50179](https://dx.doi.org/10.1002/jgrb.50179)
 
 # Other implementations
 
