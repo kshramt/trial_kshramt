@@ -34,6 +34,18 @@ You may need to edit `-I` and `-L` in `Makefile` for your environment.
 You need a C++ compiler that supports C++14 features.
 I checked that the code compiles with `clang++-3.8` and `clang++-3.9.1`.
 
+## Useful files
+
+- `./zaliapin_ben_zion_2013.cpp`: The main code.
+    Please see `./zaliapin_ben_zion_2013.exe --help` for the usage after building `./zaliapin_ben_zion_2013.exe`.
+- `./zaliapin_ben_zion_2013_ref.cpp`: A reference (slow) implementation to check correctness of `./zaliapin_ben_zion_2013.cpp`.
+- `./make_tree.py`: Convert an output of `./zaliapin_ben_zion_2013.exe` to a spanning tree.
+    Please see `python3 make_tree.py --help` for the usage.
+    You need PyYAML (`pip3 --user -U install pyyaml`) to run the code.
+- `./make_forest.py`: Convert an output of `./make_tree.py` to a spanning forest.
+    Please see `python3 make_forest.py --help` for the usage.
+    You need PyYAML (`pip3 --user -U install pyyaml`) to run the code.
+
 # References
 
 - Zaliapin, Ilya and Ben-Zion, Yehuda, 2013, Earthquake clusters in southern California I: Identification and stability, Journal of Geophysical Research: Solid Earth, [doi:10.1002/jgrb.50179](https://dx.doi.org/10.1002/jgrb.50179)
