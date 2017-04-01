@@ -43,7 +43,6 @@ def main(argv):
             width=2**31,
             indent=4,
         )
-        print(file=fp)
 
 
 def _split(i, tree, seen, forest):
