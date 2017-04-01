@@ -53,6 +53,7 @@ I checked that the code compiles with `clang++-3.8` and `clang++-3.9.1`.
 # Other implementations
 
 - [USGS's MATLAB implementation](https://github.com/usgs/CatStat/blob/e474632893b36021ee3ea67831346c9cd91fa377/QCreport/Cluster_Detection.m)
+- [Nevada Seismological Laboratory's Python implementation](https://github.com/NVSeismoLab/eqclustering)
 
 # License
 
