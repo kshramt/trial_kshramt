@@ -69,15 +69,18 @@ end
 
 
 function act(env, s, a)
+    n, m = size(env)
     i, j = s
-    s = if a == 1
+    s = if (a == 1) && (j < m)
         (i, j + 1)
-    elseif a == 2
+    elseif (a == 2) && (i > 1)
         (i - 1, j)
-    elseif a == 3
+    elseif (a == 3) && (j > 1)
         (i, j - 1)
-    else # a == 4
+    elseif (a == 4) && (i < n)
         (i + 1, j)
+    else # stopped by a wall
+        (i, j)
     end
     r = env[s...]
     return r, s
