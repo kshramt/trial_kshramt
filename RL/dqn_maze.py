@@ -52,6 +52,7 @@ class DQNAgent(object):
             replay_memory,
             random_state,
             n_batch,
+            q_target_mode,
             prep_s,
     ):
         self.cuda = cuda
@@ -71,6 +72,7 @@ class DQNAgent(object):
         self.rng = np.random.RandomState(self.random_state)
         assert n_batch > 0
         self.n_batch = n_batch
+        self.q_target_mode = q_target_mode
         self.prep_s = prep_s
 
     def action_of(self, si):
@@ -109,8 +111,12 @@ class DQNAgent(object):
         q_pred = self.model(var(self._float_tensor(batch.si))).gather(1, var(self._long_tensor(batch.ai1).view(-1, 1)))
         q_pred_const = var(q_pred.data)
         td = q_bellman - q_pred_const
-        # q_target = q_pred_const + self.alpha*td
-        q_target = q_bellman # Mnih et al (2015, Nature)
+        if self.q_target_mode == "mnih2015":
+            q_target = q_bellman # Mnih et al (2015, Nature)
+        elif self.q_target_mode == "td":
+            q_target = q_pred_const + self.alpha*td
+        else:
+            raise ValueError(f"Unsupported self.q_target_mode: {self.q_target_mode}")
 
         loss = self.loss(q_pred, q_target)
         self.opt.zero_grad()
@@ -264,6 +270,7 @@ def run(args, maze):
         cuda=torch.cuda.is_available(),
         random_state=args.agent_seed,
         n_batch=args.n_batch,
+        q_target_mode=args.q_target_mode,
         prep_s=lambda s: (s[0]/maze.shape[0], s[1]/maze.shape[1]),
     )
 
@@ -330,10 +337,11 @@ def _parse_argv(argv):
     """
     parser = argparse.ArgumentParser(doc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--lr", required=True, type=float, help="Learning rate.")
-    parser.add_argument("--alpha", required=True, type=float, help="α for TD error.")
+    parser.add_argument("--alpha", required=False, type=float, default=1e-3, help="α for TD error.")
     parser.add_argument("--epsilon", required=True, type=float, help="ε-greedy.")
     parser.add_argument("--gamma", required=True, type=float, help="γ for discounted reward.")
     parser.add_argument("--log-td", required=True, type=str, help="Log file for TD errors.")
+    parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, help="mnih2015 or td.")
     parser.add_argument("--n-steps", required=True, type=int, help="Number of maximum steps per episode.")
     parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-episodes", required=True, type=int, help="Number of episodes to run.")
