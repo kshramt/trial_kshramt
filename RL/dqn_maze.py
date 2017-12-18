@@ -43,18 +43,18 @@ class DQNAgent(object):
 
     def __init__(
             self,
-            model,
-            opt,
-            gamma,
             alpha,
-            epsilon,
             cuda,
-            replay_memory,
-            random_state,
-            n_batch,
-            q_target_mode,
             dqn_mode,
+            epsilon,
+            gamma,
+            model,
+            n_batch,
+            opt,
             prep_s,
+            q_target_mode,
+            random_state,
+            replay_memory,
     ):
         self.cuda = cuda
         self.model = model.cuda() if self.cuda else model
@@ -275,14 +275,18 @@ def run(args, maze):
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     # opt = torch.optim.RMSprop(model.parameters(), lr=args.lr)
     agent = DQNAgent(
-        model=model, opt=opt, epsilon=args.epsilon, alpha=args.alpha, gamma=args.gamma,
-        replay_memory=ReplayMemory(capacity=args.n_replay_memory, random_state=args.replay_memory_seed),
+        alpha=args.alpha,
         cuda=torch.cuda.is_available(),
-        random_state=args.agent_seed,
-        n_batch=args.n_batch,
-        q_target_mode=args.q_target_mode,
         dqn_mode=args.dqn_mode,
+        epsilon=args.epsilon,
+        gamma=args.gamma,
+        model=model,
+        n_batch=args.n_batch,
+        opt=opt,
         prep_s=lambda s: (s[0]/maze.shape[0], s[1]/maze.shape[1]),
+        q_target_mode=args.q_target_mode,
+        random_state=args.agent_seed,
+        replay_memory=ReplayMemory(capacity=args.n_replay_memory, random_state=args.replay_memory_seed),
     )
 
     env = Env(maze)
@@ -347,27 +351,29 @@ def _parse_argv(argv):
     {__file__}
     """
     parser = argparse.ArgumentParser(doc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--lr", required=True, type=float, help="Learning rate.")
+
+    parser.add_argument("--agent-seed", required=True, type=int, help="Seed for the agent.")
     parser.add_argument("--alpha", required=False, type=float, default=1e-3, help="α for TD error.")
+    parser.add_argument("--dqn-mode", required=False, default="doubledqn", choices=["doubledqn", "dqn"], type=str, help="Type of DQN.")
+    parser.add_argument("--env-seed", required=True, type=int, help="Seed to reset the environment.")
     parser.add_argument("--epsilon", required=True, type=float, help="ε-greedy.")
     parser.add_argument("--gamma", required=True, type=float, help="γ for discounted reward.")
-    parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
-    parser.add_argument("--dqn-mode", required=False, default="doubledqn", choices=["doubledqn", "dqn"], type=str, help="Type of DQN.")
-    parser.add_argument("--n-steps", required=True, type=int, help="Number of maximum steps per episode.")
-    parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
-    parser.add_argument("--n-episodes", required=True, type=int, help="Number of episodes to run.")
+    parser.add_argument("--log-file", default=os.path.join("log", datetime.datetime.now().strftime("%y%m%d%H%M%S") + "_" + str(os.getpid()) + "_" + os.path.basename(__file__) + ".log"), help="Set log file.")
+    parser.add_argument("--log-file-level", default="debug", type=lambda x: getattr(logging, x.upper()), help="Set log level for the log file.")
+    parser.add_argument("--log-stderr-level", default="info", type=lambda x: getattr(logging, x.upper()), help="Set log level for stderr.")
+    parser.add_argument("--lr", required=True, type=float, help="Learning rate.")
     parser.add_argument("--n-batch", required=True, type=int, help="Batch size.")
-    parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
-    parser.add_argument("--n-target-update-episodes", required=True, type=int, help="Number of episodes to update the target network.")
+    parser.add_argument("--n-episodes", required=True, type=int, help="Number of episodes to run.")
+    parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-middle", required=True, type=int, help="Number of units in a hidden layer.")
+    parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
+    parser.add_argument("--n-steps", required=True, type=int, help="Number of maximum steps per episode.")
+    parser.add_argument("--n-target-update-episodes", required=True, type=int, help="Number of episodes to update the target network.")
+    parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
     parser.add_argument("--replay-memory-seed", required=True, type=int, help="Random state for minibatch.")
-    parser.add_argument("--env-seed", required=True, type=int, help="Seed to reset the environment.")
-    parser.add_argument("--agent-seed", required=True, type=int, help="Seed for the agent.")
     parser.add_argument("--torch-seed", required=True, type=int, help="Seed for PyTorch.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("--log-stderr-level", default="info", type=lambda x: getattr(logging, x.upper()), help="Set log level for stderr.")
-    parser.add_argument("--log-file-level", default="debug", type=lambda x: getattr(logging, x.upper()), help="Set log level for the log file.")
-    parser.add_argument("--log-file", default=os.path.join("log", datetime.datetime.now().strftime("%y%m%d%H%M%S") + "_" + str(os.getpid()) + "_" + os.path.basename(__file__) + ".log"), help="Set log file.")
+
     args = parser.parse_args(argv)
     logger.debug(f"args\t{args}")
     assert args.n_batch <= args.n_replay_memory, (args.n_batch, args.n_replay_memory)
