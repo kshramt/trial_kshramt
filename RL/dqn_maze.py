@@ -53,6 +53,7 @@ class DQNAgent(object):
             random_state,
             n_batch,
             q_target_mode,
+            dqn_mode,
             prep_s,
     ):
         self.cuda = cuda
@@ -73,6 +74,7 @@ class DQNAgent(object):
         assert n_batch > 0
         self.n_batch = n_batch
         self.q_target_mode = q_target_mode
+        self.dqn_mode = dqn_mode
         self.prep_s = prep_s
 
     def action_of(self, si):
@@ -81,7 +83,7 @@ class DQNAgent(object):
             return self.rng.randint(self.model.output.out_features)
         else:
             # LongTensor([int, int64, int, ...]) is not allowed
-            return int(_argmax(self.model(var(self._float_tensor([si]), volatile=True)))[0])
+            return int(self.model(var(self._float_tensor([si]), volatile=True)).max(1)[1].data.numpy()[0])
 
     def update_target_model(self):
         """Call me in the main loop.
@@ -95,17 +97,7 @@ class DQNAgent(object):
 
     def optimize(self):
         batch = Transition(*zip(*self.replay_memory.sample(self.n_batch)))
-
-        # Instead of adding Q(terminal state, any action) = 0 in training data,
-        # we directly use that fact to reduce approximation errors.
-        self.model.eval()
-        v_hat_si1 = var(torch.zeros(self.n_batch), volatile=True)
-        non_final_si1 = [x for x, done in zip(batch.si1, batch.done) if not done]
-        if non_final_si1:
-            mask = self._byte_tensor([not x for x in batch.done])
-            v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[0]
-        v_hat_si1.volatile = False # used as a constant later
-        q_bellman = (var(self._float_tensor(batch.ri1)) + self.gamma*v_hat_si1).view(self.n_batch, -1)
+        q_bellman = (var(self._float_tensor(batch.ri1)) + self.gamma*self._v_hat_si1_of(batch)).view(self.n_batch, -1)
 
         self.model.train()
         q_pred = self.model(var(self._float_tensor(batch.si))).gather(1, var(self._long_tensor(batch.ai1).view(-1, 1)))
@@ -124,6 +116,24 @@ class DQNAgent(object):
         self.opt.step()
         q_pred = self.model(var(self._float_tensor(batch.si), volatile=True)).gather(1, var(self._long_tensor(batch.ai1).view(self.n_batch, -1)))
         return dict(td=td, loss=loss)
+
+    def _v_hat_si1_of(self, batch):
+        self.model.eval()
+        # Instead of adding Q(terminal state, any action) = 0 in training data,
+        # we directly use that fact to reduce approximation errors.
+        v_hat_si1 = var(torch.zeros(self.n_batch), volatile=True)
+        non_final_si1 = [x for x, done in zip(batch.si1, batch.done) if not done]
+        if non_final_si1:
+            mask = self._byte_tensor([not x for x in batch.done])
+            if self.dqn_mode == "dqn":
+                v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[0]
+            elif self.dqn_mode == "doubledqn":
+                actions = self.model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[1]
+                v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).gather(1, actions.view(-1, 1))
+            else:
+                raise ValueError(f"Unsupported self.dqn_mode: {self.dqn_mode}")
+        v_hat_si1.volatile = False # used as a constant later
+        return v_hat_si1
 
     def _float_tensor(self, x, **kwargs):
         return torch.cuda.FloatTensor(x, **kwargs) if self.cuda else torch.FloatTensor(x, **kwargs)
@@ -239,7 +249,7 @@ def run(args, maze):
     logger.info(f"n_input, args.n_middle, n_output\t{n_input, args.n_middle, n_output}")
     namer = _make_namer()
     act = Swish
-    bn = lambda : torch.nn.BatchNorm1d(num_features=args.n_middle, momentum=1e-3, affine=False)
+    # bn = lambda : torch.nn.BatchNorm1d(num_features=args.n_middle, momentum=1e-3, affine=False)
     # act = Log1p
     model = torch.nn.Sequential(collections.OrderedDict((
         (namer("fc"), torch.nn.Linear(n_input, args.n_middle)),
@@ -271,6 +281,7 @@ def run(args, maze):
         random_state=args.agent_seed,
         n_batch=args.n_batch,
         q_target_mode=args.q_target_mode,
+        dqn_mode=args.dqn_mode,
         prep_s=lambda s: (s[0]/maze.shape[0], s[1]/maze.shape[1]),
     )
 
@@ -340,8 +351,8 @@ def _parse_argv(argv):
     parser.add_argument("--alpha", required=False, type=float, default=1e-3, help="α for TD error.")
     parser.add_argument("--epsilon", required=True, type=float, help="ε-greedy.")
     parser.add_argument("--gamma", required=True, type=float, help="γ for discounted reward.")
-    parser.add_argument("--log-td", required=True, type=str, help="Log file for TD errors.")
-    parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, help="mnih2015 or td.")
+    parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
+    parser.add_argument("--dqn-mode", required=False, default="doubledqn", choices=["doubledqn", "dqn"], type=str, help="Type of DQN.")
     parser.add_argument("--n-steps", required=True, type=int, help="Number of maximum steps per episode.")
     parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-episodes", required=True, type=int, help="Number of episodes to run.")
@@ -360,11 +371,8 @@ def _parse_argv(argv):
     args = parser.parse_args(argv)
     logger.debug(f"args\t{args}")
     assert args.n_batch <= args.n_replay_memory, (args.n_batch, args.n_replay_memory)
+    assert 0 < args.alpha, args.alpha
     return args
-
-
-def _argmax(pred):
-    return pred.max(1)[1].data.numpy()
 
 
 def _seed_generator(random_state):
