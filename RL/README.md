@@ -1,4 +1,26 @@
 ```
+$ python dqn_maze.py \
+   --agent-seed=44 \
+   --alpha=0.001 \
+   --dqn-mode=doubledqn \
+   --env-seed=43 \
+   --epsilon=0.5 \
+   --gamma=0.99 \
+   --log-stderr-level=debug \
+   --lr=1e-4 \
+   --n-batch=300 \
+   --n-episodes=10000 \
+   --n-log-steps=30 \
+   --n-middle=500 \
+   --n-replay-memory=600 \
+   --n-steps=30 \
+   --n-target-update-episodes=20 \
+   --q-target-mode=mnih2015 \
+   --replay-memory-seed=42 \
+   --torch-seed=46
+```
+
+```
 $ julia q_maze.jl out.jld2 42 | gnuplot -persist -e 'plot "< cat" w l'
 $ julia q_maze_plot.jl out.jld2
       0.00           0.00           0.00           0.00           0.00           0.00           0.00
