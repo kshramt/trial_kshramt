@@ -117,8 +117,7 @@ class DQNAgent(object):
         loss.backward()
         self.opt.step()
         q_pred = self.model(var(self._float_tensor(batch.si), volatile=True)).gather(1, var(self._long_tensor(batch.ai1).view(self.n_batch, -1)))
-        # return dict(td=td, loss=loss)
-        return dict(td=None, loss=loss)
+        return dict(td=td, loss=loss)
 
     def _float_tensor(self, x, **kwargs):
         return torch.cuda.FloatTensor(x, **kwargs) if self.cuda else torch.FloatTensor(x, **kwargs)
@@ -278,10 +277,10 @@ def run(args, maze):
             ai1 = agent.action_of(si)
             si1, ri1, done, debug_info = env.step(ai1)
             metric = agent.train(si, ai1, ri1, si1, done)
-            if i_step%args.n_log_steps == 0:
+            if i_step%args.n_log_steps == 0 and (metric is not None):
+                metric["td"] = np.mean(metric["td"].data.numpy()**2)
                 step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
-                if metric is not None:
-                    logger.info(f"loss\t{metric['loss'].data.numpy()[0]}")
+                logger.info(f"loss, mean(td^2)\t{metric['loss'].data.numpy()[0]}\t{metric['td']}")
             si = si1
             if done:
                 episode_result_list.append(dict(i_episode=i_episode, env_seed=env_seed, step_result_list=step_result_list))
