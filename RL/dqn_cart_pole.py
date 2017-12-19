@@ -71,6 +71,7 @@ class DQNAgent(object):
             return self.rng.randint(self.model.output.out_features)
         else:
             # LongTensor([int, int64, int, ...]) is not allowed
+            self.model.eval()
             return int(self.model(var(self._float_tensor([si]), volatile=True)).max(1)[1].data.numpy()[0])
 
     def update_target_model(self):
@@ -85,7 +86,8 @@ class DQNAgent(object):
 
     def optimize(self):
         batch = Transition(*zip(*self.replay_memory.sample(self.n_batch)))
-        q_bellman = (var(self._float_tensor(batch.ri1)) + self.gamma*self._v_hat_si1_of(batch)).view(self.n_batch, -1)
+        v_hat_si1 = self._v_hat_si1_of(batch)
+        q_bellman = (var(self._float_tensor(batch.ri1)) + self.gamma*v_hat_si1).view(self.n_batch, -1)
 
         self.model.train()
         q_pred = self.model(var(self._float_tensor(batch.si))).gather(1, var(self._long_tensor(batch.ai1).view(-1, 1)))
@@ -114,9 +116,12 @@ class DQNAgent(object):
         if non_final_si1:
             mask = self._byte_tensor([not x for x in batch.done])
             if self.dqn_mode == "dqn":
+                self.target_model.eval()
                 v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[0]
             elif self.dqn_mode == "doubledqn":
+                self.model.eval()
                 actions = self.model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[1]
+                self.target_model.eval()
                 v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).gather(1, actions.view(-1, 1))
             else:
                 raise ValueError(f"Unsupported self.dqn_mode: {self.dqn_mode}")
@@ -196,23 +201,22 @@ def run(args, env):
     logger.info(f"n_input, args.n_middle, n_output\t{n_input, args.n_middle, n_output}")
     namer = _make_namer()
     act = Swish
-    # bn = lambda : torch.nn.BatchNorm1d(num_features=args.n_middle, momentum=1e-3, affine=False)
+    # bn = lambda : torch.nn.BatchNorm1d(num_features=args.n_middle, momentum=1e-4, affine=True)
     # act = Log1p
     model = torch.nn.Sequential(collections.OrderedDict((
         (namer("fc"), torch.nn.Linear(n_input, args.n_middle)),
         (namer("ac"), act()),
-        # (namer("bn"), bn()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
-        # (namer("bn"), bn()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
-        # (namer("bn"), bn()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
-        # (namer("bn"), bn()),
         ("output", torch.nn.Linear(args.n_middle, n_output)),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, n_output)),
+        # ("output", torch.nn.BatchNorm1d(num_features=n_output, momentum=1e-3, affine=True)),
     )))
+    # model.output.out_features = n_output
     def _init(m):
         if type(m) == torch.nn.Linear:
            torch.nn.init.kaiming_uniform(m.weight.data)
