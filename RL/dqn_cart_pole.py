@@ -104,7 +104,6 @@ class DQNAgent(object):
         self.opt.zero_grad()
         loss.backward()
         self.opt.step()
-        q_pred = self.model(var(self._float_tensor(batch.si), volatile=True)).gather(1, var(self._long_tensor(batch.ai1).view(self.n_batch, -1)))
         return dict(td=td, loss=loss)
 
     def _v_hat_si1_of(self, batch):
