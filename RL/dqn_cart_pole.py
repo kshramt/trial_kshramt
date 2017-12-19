@@ -4,12 +4,14 @@ import argparse
 import collections
 import copy
 import datetime
+import itertools
 import logging
 import os
 import random
 import sys
 
 import torch
+import gym
 import numpy as np
 
 
@@ -23,17 +25,6 @@ var = torch.autograd.Variable
 
 with open(__file__) as fp:
     source = fp.read()
-
-
-maze = np.array([
-    [-1, -1, -1, -1, -1, -1, -1],
-    [-1,  0,  0, -1,  0,  1, -1],
-    [-1,  0,  0, -1,  0,  0, -1],
-    [-1,  0,  0, -1,  0,  0, -1],
-    [-1,  0,  0,  0,  0,  0, -1],
-    [-1,  0,  0, -1,  0,  0, -1],
-    [-1, -1, -1, -1, -1, -1, -1],
-], dtype=float)
 
 
 Transition = collections.namedtuple("Transition", ("si", "ai1", "ri1", "si1", "done"))
@@ -51,7 +42,6 @@ class DQNAgent(object):
             model,
             n_batch,
             opt,
-            prep_s,
             q_target_mode,
             random_state,
             replay_memory,
@@ -75,10 +65,8 @@ class DQNAgent(object):
         self.n_batch = n_batch
         self.q_target_mode = q_target_mode
         self.dqn_mode = dqn_mode
-        self.prep_s = prep_s
 
     def action_of(self, si):
-        # return 1
         if self.rng.rand() <= self.epsilon:
             return self.rng.randint(self.model.output.out_features)
         else:
@@ -91,7 +79,7 @@ class DQNAgent(object):
         self.target_model = copy.deepcopy(self.model)
 
     def train(self, si, ai1, ri1, si1, done):
-        self.replay_memory.push((self.prep_s(si), ai1, ri1, self.prep_s(si1), done))
+        self.replay_memory.push((si, ai1, ri1, si1, done))
         if self.replay_memory.filled():
             return self.optimize()
 
@@ -145,48 +133,6 @@ class DQNAgent(object):
         return torch.cuda.ByteTensor(x, **kwargs) if self.cuda else torch.ByteTensor(x, **kwargs)
 
 
-class Env(object):
-
-    def __init__(self, maze):
-        self.maze = maze
-        self.state = None
-
-    def reset(self, random_state):
-        rng = np.random.RandomState(random_state)
-        n, m = self.maze.shape
-        while True:
-            i = rng.randint(0, n)
-            j = rng.randint(0, m)
-            # i = 2
-            # j = 5
-            state = (i, j)
-            if self.maze[state] == 0:
-                self.state = state
-                return self.state
-
-    def step(self, action):
-        """
-         1
-        2 0
-         3
-        """
-        n, m = self.maze.shape
-        i, j = self.state
-        if (action == 0) and (j < m - 1):
-            state = (i, j + 1)
-        elif (action == 1) and (i > 0):
-            state = (i - 1, j)
-        elif (action == 2) and (j > 0):
-            state = (i, j - 1)
-        elif (action == 3) and (i < n - 1):
-            state = (i + 1, j)
-        else:
-            state = (i, j)
-        self.state = state
-        ri1 = self.maze[self.state]
-        return self.state, ri1, bool(ri1 == 1), None
-
-
 class ReplayMemory(object):
 
     def __init__(self, capacity, random_state):
@@ -238,14 +184,15 @@ def main(argv):
     args = _parse_argv(argv[1:])
     _add_handlers(logger, args.log_file, args.log_stderr_level, args.log_file_level)
     logger.info(f"args\t{args}")
-    run(args, maze)
+    env = gym.make("CartPole-v1").unwrapped
+    run(args, env)
 
 
-def run(args, maze):
+def run(args, env):
     torch.manual_seed(args.torch_seed)
 
-    n_input = maze.ndim
-    n_output = 2**maze.ndim
+    n_input = env.observation_space.shape[0]
+    n_output = env.action_space.n
     logger.info(f"n_input, args.n_middle, n_output\t{n_input, args.n_middle, n_output}")
     namer = _make_namer()
     act = Swish
@@ -283,66 +230,36 @@ def run(args, maze):
         model=model,
         n_batch=args.n_batch,
         opt=opt,
-        prep_s=lambda s: (s[0]/maze.shape[0], s[1]/maze.shape[1]),
         q_target_mode=args.q_target_mode,
         random_state=args.agent_seed,
         replay_memory=ReplayMemory(capacity=args.n_replay_memory, random_state=args.replay_memory_seed),
     )
 
-    env = Env(maze)
     episode_result_list = []
-    for i_episode, env_seed in zip(range(args.n_episodes), _seed_generator(args.env_seed)):
-        logger.info(f"i_episode\t{i_episode}")
-        si = env.reset(env_seed)
-        step_result_list = []
-        for i_step in range(args.n_steps):
-            ai1 = agent.action_of(si)
-            si1, ri1, done, debug_info = env.step(ai1)
-            metric = agent.train(si, ai1, ri1, si1, done)
-            if i_step%args.n_log_steps == 0 and (metric is not None):
-                metric["td"] = np.mean(metric["td"].data.numpy()**2)
-                step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
-                logger.info(f"loss, mean(td^2)\t{metric['loss'].data.numpy()[0]}\t{metric['td']}")
-            si = si1
-            if done:
-                episode_result_list.append(dict(i_episode=i_episode, env_seed=env_seed, step_result_list=step_result_list))
-                break
-        if i_episode%args.n_target_update_episodes == 0:
-            agent.update_target_model()
-        if i_episode%10 == 0 and agent.replay_memory.filled():
-            pass
-            print_q(agent, *maze.shape)
-
-
-def print_q(agent, n, m, fp=sys.stderr):
-    agent.model.eval()
-    print(file=fp)
-    for i in range(n):
-        for j in range(m):
-            x, y = agent.prep_s((i, j))
-            print("    ", end="", file=fp)
-            q = agent.model(var(agent._float_tensor([[x, y]]), volatile=True)).data.numpy()
-            print(f"{q[0, 1]:6.2f} ", end="", file=fp)
-            print("    ", end="", file=fp)
-        print(file=fp)
-        for j in range(m):
-            x, y = agent.prep_s((i, j))
-            q = agent.model(var(agent._float_tensor([[x, y]]), volatile=True)).data.numpy()
-            print(f"{q[0, 2]:6.2f} ", end="", file=fp)
-            print(" ", end="", file=fp)
-            print(f"{q[0, 0]:6.2f} ", end="", file=fp)
-        print(file=fp)
-        for j in range(m):
-            x, y = agent.prep_s((i, j))
-            q = agent.model(var(agent._float_tensor([[x, y]]), volatile=True)).data.numpy()
-            print("    ", end="", file=fp)
-            print(f"{q[0, 3]:6.2f} ", end="", file=fp)
-            print("    ", end="", file=fp)
-        print(file=fp)
-
-        print(file=fp)
-    # import time
-    # time.sleep(2)
+    with open(args.dat_file, "w") as fp:
+        for i_episode, env_seed in zip(range(args.n_episodes), _seed_generator(args.env_seed)):
+            logger.info(f"i_episode\t{i_episode}")
+            env.np_random = np.random.RandomState(env_seed)
+            si = env.reset()
+            step_result_list = []
+            for i_step in itertools.count():
+                ai1 = agent.action_of(si)
+                si1, ri1, done, debug_info = env.step(ai1)
+                metric = agent.train(si, ai1, ri1, si1, done)
+                if i_step%args.n_log_steps == 0 and (metric is not None):
+                    metric["td"] = np.mean(metric["td"].data.numpy()**2)
+                    step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
+                    logger.info(f"loss, mean(td^2)\t{metric['loss'].data.numpy()[0]}\t{metric['td']}")
+                si = si1
+                if done:
+                    print(i_episode, i_step, sep="\t", file=fp)
+                    fp.flush()
+                    episode_result_list.append(dict(i_episode=i_episode, n_steps=i_step, env_seed=env_seed, step_result_list=step_result_list))
+                    break
+            if i_episode%args.n_target_update_episodes == 0:
+                agent.update_target_model()
+            if i_episode%10 == 0 and agent.replay_memory.filled():
+                pass
 
 
 def _parse_argv(argv):
@@ -352,13 +269,16 @@ def _parse_argv(argv):
     """
     parser = argparse.ArgumentParser(doc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    now = datetime.datetime.now().strftime("%y%m%d%H%M%S")
+
     parser.add_argument("--agent-seed", required=True, type=int, help="Seed for the agent.")
     parser.add_argument("--alpha", required=False, type=float, default=1e-3, help="α for TD error.")
+    parser.add_argument("--dat-file", default=os.path.join("log", now + "_" + str(os.getpid()) + "_" + os.path.basename(__file__) + ".dat"), help="Set data file.")
     parser.add_argument("--dqn-mode", required=False, default="doubledqn", choices=["doubledqn", "dqn"], type=str, help="Type of DQN.")
     parser.add_argument("--env-seed", required=True, type=int, help="Seed to reset the environment.")
     parser.add_argument("--epsilon", required=True, type=float, help="ε-greedy.")
     parser.add_argument("--gamma", required=True, type=float, help="γ for discounted reward.")
-    parser.add_argument("--log-file", default=os.path.join("log", datetime.datetime.now().strftime("%y%m%d%H%M%S") + "_" + str(os.getpid()) + "_" + os.path.basename(__file__) + ".log"), help="Set log file.")
+    parser.add_argument("--log-file", default=os.path.join("log", now + "_" + str(os.getpid()) + "_" + os.path.basename(__file__) + ".log"), help="Set log file.")
     parser.add_argument("--log-file-level", default="debug", type=lambda x: getattr(logging, x.upper()), help="Set log level for the log file.")
     parser.add_argument("--log-stderr-level", default="info", type=lambda x: getattr(logging, x.upper()), help="Set log level for stderr.")
     parser.add_argument("--lr", required=True, type=float, help="Learning rate.")
@@ -367,7 +287,6 @@ def _parse_argv(argv):
     parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-middle", required=True, type=int, help="Number of units in a hidden layer.")
     parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
-    parser.add_argument("--n-steps", required=True, type=int, help="Number of maximum steps per episode.")
     parser.add_argument("--n-target-update-episodes", required=True, type=int, help="Number of episodes to update the target network.")
     parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
     parser.add_argument("--replay-memory-seed", required=True, type=int, help="Random state for minibatch.")
