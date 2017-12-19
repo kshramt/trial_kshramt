@@ -11,6 +11,8 @@ import random
 import sys
 
 import torch
+import matplotlib
+matplotlib.use("agg")
 import gym
 import numpy as np
 
@@ -246,6 +248,7 @@ def run(args, env):
             si = prep_s(env.reset())
             step_result_list = []
             r_acc = 0
+            si1_list = []
             for i_step in itertools.count():
                 if agent.replay_memory.filled():
                     ai1 = agent.action_of(si)
@@ -255,9 +258,9 @@ def run(args, env):
                     ai1 = agent.action_of(si)
                     agent.epsilon = eps
                 si1, ri1, done, debug_info = env.step(ai1)
-                ri1 /= 200
                 r_acc += ri1
                 si1 = prep_s(si1)
+                si1_list.append(si1)
                 metric = agent.train(si, ai1, ri1, si1, done)
                 if i_step%args.n_log_steps == 0 and (metric is not None):
                     metric["td"] = np.mean(metric["td"].data.numpy()**2)
@@ -271,7 +274,7 @@ def run(args, env):
                     break
             if i_episode%args.n_target_update_episodes == 0:
                 agent.update_target_model()
-            if i_episode%10 == 0 and agent.replay_memory.filled():
+            if i_episode%50 == 0 and agent.replay_memory.filled():
                 xs = np.linspace(-1, 1, 20)
                 ys = np.linspace(-1, 1, 20)
                 ss = []
@@ -281,12 +284,23 @@ def run(args, env):
                 ss = agent._float_tensor(ss)
                 agent.model.eval()
                 rgbs = agent.model(var(ss, volatile=True)).data.numpy()
+                logger.debug(rgbs)
                 import matplotlib.pyplot as plt
                 import os
                 os.makedirs("qlog", exist_ok=True)
                 fig, ax = plt.subplots()
-                ax.scatter(ss.numpy()[:, 0], ss.numpy()[:, 1], c=np.maximum(np.minimum(-rgbs, 1), 0), s=30, linewidth=0)
+                actions = np.argmax(rgbs, axis=1)
+                rgbs[:, :] = 0
+                rgbs[np.array(list(range(len(rgbs)))), actions] = 1
+                # rgbs = np.zeros_like(rgbs)
+                # lo = np.percentile(rgbs, 10)
+                # hi = np.percentile(rgbs, 90)
+                # logger.debug((lo, hi))
+                # rgbs = np.maximum(np.minimum((rgbs - lo)/(hi - lo), 1), 0)
+                ax.scatter(ss.numpy()[:, 0], ss.numpy()[:, 1], c=rgbs, s=30, linewidth=0)
+                ax.plot([x[0] for x in si1_list], [x[1] for x in si1_list])
                 fig.savefig(f"qlog/{i_episode}.pdf", transparent=True)
+                plt.close(fig)
                 pass
 
 
