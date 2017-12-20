@@ -81,8 +81,10 @@ class DQNAgent(object):
         """
         self.target_model = copy.deepcopy(self.model)
 
-    def train(self, si, ai1, ri1, si1, done):
+    def push(self, si, ai1, ri1, si1, done):
         self.replay_memory.push((si, ai1, ri1, si1, done))
+
+    def train(self):
         if self.replay_memory.filled():
             return self.optimize()
 
@@ -242,6 +244,7 @@ def run(args, env):
 
     episode_result_list = []
     with open(args.dat_file, "w") as fp:
+        i_total_step = -1
         for i_episode, env_seed in zip(range(args.n_episodes), _seed_generator(args.env_seed)):
             logger.info(f"i_episode\t{i_episode}")
             env.np_random = np.random.RandomState(env_seed)
@@ -250,6 +253,7 @@ def run(args, env):
             r_acc = 0
             si1_list = []
             for i_step in itertools.count():
+                i_total_step += 1
                 if agent.replay_memory.filled():
                     ai1 = agent.action_of(si)
                 else:
@@ -261,7 +265,10 @@ def run(args, env):
                 r_acc += ri1
                 si1 = prep_s(si1)
                 si1_list.append(si1)
-                metric = agent.train(si, ai1, ri1, si1, done)
+                agent.push(si, ai1, ri1, si1, done)
+                metric = None
+                if i_total_step%args.n_train_steps:
+                    metric = agent.train()
                 if i_step%args.n_log_steps == 0 and (metric is not None):
                     metric["td"] = np.mean(metric["td"].data.numpy()**2)
                     step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
@@ -334,6 +341,7 @@ def _parse_argv(argv):
     parser.add_argument("--n-middle", required=True, type=int, help="Number of units in a hidden layer.")
     parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
     parser.add_argument("--n-target-update-episodes", required=True, type=int, help="Number of episodes to update the target network.")
+    parser.add_argument("--n-train-steps", required=True, type=int, help="Number of steps to update the network.")
     parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
     parser.add_argument("--replay-memory-seed", required=True, type=int, help="Random state for minibatch.")
     parser.add_argument("--torch-seed", required=True, type=int, help="Seed for PyTorch.")
@@ -343,6 +351,7 @@ def _parse_argv(argv):
     logger.debug(f"args\t{args}")
     assert args.n_batch <= args.n_replay_memory, (args.n_batch, args.n_replay_memory)
     assert 0 < args.alpha, args.alpha
+    assert 0 < args.n_train_steps
     return args
 
 

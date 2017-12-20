@@ -1,4 +1,8 @@
 ```
+$ time python dqn_mountain_car.py --torch-seed=46 --replay-memory-seed=42 --agent-seed=44 --env-seed=43 --alpha=0.01 --epsilon=0.01 --gamma=1 --log-stderr-level=debug --lr=1e-3 --n-batch=30 --n-episodes=3000 --n-log-steps=100 --n-middle=100  --n-replay-memory=20000 --n-target-update-episodes=20 --n-train-steps=1 --dat-file="tmp.dat" --q-target-mode=mnih2015 --dqn-mode=doubledqn
+```
+
+```
 $ python dqn_maze.py \
    --agent-seed=44 \
    --alpha=0.001 \
