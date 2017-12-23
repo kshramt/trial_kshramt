@@ -17,7 +17,6 @@ import numpy as np
 
 __version__ = "0.1.0"
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 
 var = torch.autograd.Variable
@@ -325,6 +324,7 @@ def _make_namer():
 
 
 def _add_handlers(logger, path, level_stderr, level_path):
+    logger.setLevel(logging.DEBUG)
     fmt = logging.Formatter("%(levelname)s\t%(process)d\t%(asctime)s\t%(filename)s\t%(funcName)s\t%(lineno)d\t%(message)s")
 
     hdl = logging.StreamHandler(sys.stderr)
