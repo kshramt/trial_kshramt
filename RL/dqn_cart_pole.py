@@ -183,6 +183,28 @@ class Log1p(torch.nn.Module):
         return self.__class__.__name__ + ' ()'
 
 
+class Exp(torch.nn.Module):
+
+    def forward(self, input):
+        return torch.exp(input)
+
+    def __repr__(self):
+        return self.__class__.__name__ + " ()"
+
+
+class Scale(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.logscale = torch.nn.Parameter(torch.zeros(1, 1))
+
+    def forward(self, input):
+        return input*torch.exp(self.logscale)
+
+    def __repr__(self):
+        return self.__calss__.__name__ + " ()"
+
+
 def main(argv):
     args = _parse_argv(argv[1:])
     _add_handlers(logger, args.log_file, args.log_stderr_level, args.log_file_level)
@@ -215,6 +237,13 @@ def run(args, env):
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
         ("output", torch.nn.Linear(args.n_middle, n_output)),
+
+        # (namer("fc"), torch.nn.Linear(args.n_middle, n_output)),
+        # ("output", Exp()),
+
+        # (namer("fc"), torch.nn.Linear(args.n_middle, n_output)),
+        # ("output", Scale()),
+
         # (namer("fc"), torch.nn.Linear(args.n_middle, n_output)),
         # ("output", torch.nn.BatchNorm1d(num_features=n_output, momentum=1e-3, affine=True)),
     )))
@@ -224,7 +253,7 @@ def run(args, env):
            torch.nn.init.kaiming_uniform(m.weight.data)
            m.bias.data.fill_(0)
     model.apply(_init)
-    # opt = torch.optim.SGD(model.parameters(), lr=3e-4, momentum=1e-1)
+    # opt = torch.optim.SGD(model.parameters(), lr=args.lr)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     # opt = torch.optim.RMSprop(model.parameters(), lr=args.lr)
     agent = DQNAgent(
