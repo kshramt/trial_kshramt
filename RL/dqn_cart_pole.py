@@ -278,7 +278,12 @@ def run(args, env):
             si = env.reset()
             step_result_list = []
             for i_step in itertools.count():
-                ai1 = agent.action_of(si)
+                if agent.replay_memory.filled():
+                    ai1 = agent.action_of(si)
+                else:
+                    eps, agent.epsilon = agent.epsilon, 1
+                    ai1 = agent.action_of(si)
+                    agent.epsilon = eps
                 si1, ri1, done, debug_info = env.step(ai1)
                 metric = agent.train(si, ai1, ri1, si1, done)
                 if i_step%args.n_log_steps == 0 and (metric is not None):
