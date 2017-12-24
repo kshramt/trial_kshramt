@@ -260,7 +260,7 @@ def run(args, env):
         alpha=args.alpha,
         cuda=torch.cuda.is_available(),
         dqn_mode=args.dqn_mode,
-        epsilon=args.epsilon,
+        epsilon=1,
         gamma=args.gamma,
         model=model,
         n_batch=args.n_batch,
@@ -273,7 +273,9 @@ def run(args, env):
     episode_result_list = []
     with open(args.dat_file, "w") as fp:
         for i_episode, env_seed in zip(range(args.n_episodes), _seed_generator(args.env_seed)):
-            logger.info(f"i_episode\t{i_episode}")
+            if agent.replay_memory.filled():
+                agent.epsilon = max(agent.epsilon - (1 - args.epsilon)/args.n_epsilon_decay, args.epsilon)
+            logger.info(f"i_episode\t{i_episode}\t{agent.epsilon}")
             env.np_random = np.random.RandomState(env_seed)
             si = env.reset()
             step_result_list = []
@@ -324,6 +326,7 @@ def _parse_argv(argv):
     parser.add_argument("--lr", required=True, type=float, help="Learning rate.")
     parser.add_argument("--n-batch", required=True, type=int, help="Batch size.")
     parser.add_argument("--n-episodes", required=True, type=int, help="Number of episodes to run.")
+    parser.add_argument("--n-epsilon-decay", required=True, type=int, help="Number of steps to decay epsilon.")
     parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-middle", required=True, type=int, help="Number of units in a hidden layer.")
     parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
@@ -337,6 +340,7 @@ def _parse_argv(argv):
     logger.debug(f"args\t{args}")
     assert args.n_batch <= args.n_replay_memory, (args.n_batch, args.n_replay_memory)
     assert 0 < args.alpha, args.alpha
+    assert 0 < args.n_epsilon_decay
     return args
 
 
