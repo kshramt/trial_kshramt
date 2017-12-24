@@ -84,7 +84,9 @@ class DQNAgent(object):
             return self.optimize()
 
     def optimize(self):
-        batch = Transition(*zip(*self.replay_memory.sample(self.n_batch)))
+        batch = self.replay_memory.sample(self.n_batch - 1)
+        batch.append(self.replay_memory.buffer[self.replay_memory.pointer])
+        batch = Transition(*zip(*batch))
         v_hat_si1 = self._v_hat_si1_of(batch)
         q_bellman = (var(self._float_tensor(batch.ri1)) + self.gamma*v_hat_si1).view(self.n_batch, -1)
 
