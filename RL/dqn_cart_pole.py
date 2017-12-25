@@ -295,7 +295,7 @@ def run(args, env):
                     step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
                     logger.info(f"loss, mean(td^2)\t{metric['loss'].data.numpy()[0]}\t{metric['td']}")
                 si = si1
-                if done:
+                if done or (i_step > args.n_steps):
                     print(i_episode, i_step, sep="\t", file=fp)
                     fp.flush()
                     episode_result_list.append(dict(i_episode=i_episode, n_steps=i_step, env_seed=env_seed, step_result_list=step_result_list))
@@ -332,6 +332,7 @@ def _parse_argv(argv):
     parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-middle", required=True, type=int, help="Number of units in a hidden layer.")
     parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
+    parser.add_argument("--n-steps", required=True, type=int, help="Number of steps to run per episode.")
     parser.add_argument("--n-target-update-episodes", required=True, type=int, help="Number of episodes to update the target network.")
     parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
     parser.add_argument("--replay-memory-seed", required=True, type=int, help="Random state for minibatch.")
