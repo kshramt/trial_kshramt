@@ -115,14 +115,15 @@ class DQNAgent(object):
         non_final_si1 = [x for x, done in zip(batch.si1, batch.done) if not done]
         if non_final_si1:
             mask = self._byte_tensor([not x for x in batch.done])
+            non_final_si1 = var(self._float_tensor(non_final_si1), volatile=True)
             if self.dqn_mode == "dqn":
                 self.target_model.eval()
-                v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[0]
+                v_hat_si1[mask] = self.target_model(non_final_si1).max(1)[0]
             elif self.dqn_mode == "doubledqn":
                 self.model.eval()
-                actions = self.model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[1]
+                actions = self.model(non_final_si1).max(1)[1]
                 self.target_model.eval()
-                v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).gather(1, actions.view(-1, 1))
+                v_hat_si1[mask] = self.target_model(non_final_si1).gather(1, actions.view(-1, 1))
             else:
                 raise ValueError(f"Unsupported self.dqn_mode: {self.dqn_mode}")
         v_hat_si1.volatile = False # used as a constant later
