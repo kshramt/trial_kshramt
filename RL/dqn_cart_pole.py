@@ -152,6 +152,12 @@ class ReplayMemory(object):
     def push(self, x):
         self.buffer[self.pointer] = x
         self.pointer = (self.pointer + 1)%self.capacity
+        # if self.buffer[self.pointer] is None:
+        #     self.buffer[self.pointer] = x
+        #     self.pointer = (self.pointer + 1)%self.capacity
+        # else:
+        #     self.pointer = (self.pointer + self.rng.randint(0, self.capacity - 1))%self.capacity
+        #     self.buffer[self.pointer] = x
         return self
 
     def sample(self, n):
