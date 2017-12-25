@@ -229,7 +229,9 @@ def run(args, env):
     n_output = env.action_space.n
     logger.info(f"n_input, args.n_middle, n_output\t{n_input, args.n_middle, n_output}")
     namer = _make_namer()
-    act = Swish
+    # act = Swish
+    # act = torch.nn.ReLU
+    act = torch.nn.Tanh
     # bn = lambda : torch.nn.BatchNorm1d(num_features=args.n_middle, momentum=1e-4, affine=True)
     # act = Log1p
     model = torch.nn.Sequential(collections.OrderedDict((
