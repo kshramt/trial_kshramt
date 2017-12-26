@@ -222,8 +222,8 @@ def run(args, env):
     # model.output.out_features = n_output
     def _init(m):
         if type(m) == torch.nn.Linear:
-           torch.nn.init.kaiming_uniform(m.weight.data)
-           m.bias.data.fill_(0)
+            torch.nn.init.kaiming_uniform(m.weight.data)
+            m.bias.data.fill_(0)
     model.apply(_init)
     # opt = torch.optim.SGD(model.parameters(), lr=3e-4, momentum=1e-1)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
