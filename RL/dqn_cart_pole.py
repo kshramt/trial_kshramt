@@ -66,7 +66,7 @@ class DQNAgent(object):
         self.dqn_mode = dqn_mode
 
     def action_of(self, si):
-        if self.rng.rand() <= self.epsilon:
+        if self.rng.rand() < self.epsilon:
             return self.rng.randint(self.model.output.out_features)
         else:
             # LongTensor([int, int64, int, ...]) is not allowed
