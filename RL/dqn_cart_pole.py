@@ -117,8 +117,8 @@ class DQNAgent(object):
             mask = self._byte_tensor([not x for x in batch.done])
             non_final_si1 = var(self._float_tensor(non_final_si1), volatile=True)
             if self.dqn_mode == "dqn":
-                self.target_model.eval()
-                v_hat_si1[mask] = self.target_model(non_final_si1).max(1)[0]
+                self.model.eval()
+                v_hat_si1[mask] = self.model(non_final_si1).max(1)[0]
             elif self.dqn_mode == "doubledqn":
                 self.model.eval()
                 actions = self.model(non_final_si1).max(1)[1]
