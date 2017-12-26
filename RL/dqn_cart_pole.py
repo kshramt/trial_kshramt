@@ -78,12 +78,12 @@ class DQNAgent(object):
         """
         self.target_model = copy.deepcopy(self.model)
 
-    def train(self, si, ai1, ri1, si1, done):
+    def push(self, si, ai1, ri1, si1, done):
         self.replay_memory.push((si, ai1, ri1, si1, done))
-        if self.replay_memory.filled():
-            return self.optimize()
 
-    def optimize(self):
+    def train(self):
+        if len(self.replay_memory.buffer) < self.n_batch:
+            return
         batch = self.replay_memory.sample(self.n_batch - 1)
         batch.append(self.replay_memory.buffer[self.replay_memory.pointer])
         batch = Transition(*zip(*batch))
@@ -145,14 +145,17 @@ class ReplayMemory(object):
         assert capacity > 0, capacity
         self.capacity = capacity
         # si, ai1, ri1, si1, done
-        self.buffer = [None]*self.capacity
-        self.pointer = 0
+        self.buffer = []
+        self.pointer = -1
         self.random_state = random_state # for record
         self.rng = random.Random(self.random_state)
 
     def push(self, x):
-        self.buffer[self.pointer] = x
-        self.pointer = (self.pointer + 1)%self.capacity
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(x)
+        else:
+            self.pointer = (self.pointer + 1)%self.capacity
+            self.buffer[self.pointer] = x
         # if self.buffer[self.pointer] is None:
         #     self.buffer[self.pointer] = x
         #     self.pointer = (self.pointer + 1)%self.capacity
@@ -163,9 +166,6 @@ class ReplayMemory(object):
 
     def sample(self, n):
         return self.rng.sample(self.buffer, n)
-
-    def filled(self):
-        return self.buffer[self.pointer] is not None
 
 
 class Swish(torch.nn.Module):
@@ -283,36 +283,40 @@ def run(args, env):
 
     episode_result_list = []
     with open(args.dat_file, "w") as fp:
+        i_total_step = -1
         for i_episode, env_seed in zip(range(args.n_episodes), _seed_generator(args.env_seed)):
-            if agent.replay_memory.filled():
-                agent.epsilon = max(agent.epsilon - (1 - args.epsilon)/args.n_epsilon_decay, args.epsilon)
             logger.info(f"i_episode\t{i_episode}\t{agent.epsilon}")
             env.np_random = np.random.RandomState(env_seed)
             si = env.reset()
             step_result_list = []
             for i_step in itertools.count():
-                if agent.replay_memory.filled():
+                i_total_step += 1
+
+                if (len(agent.replay_memory.buffer) >= agent.n_batch) and (i_total_step >= args.n_start_train):
+                    agent.epsilon = max(agent.epsilon - (1 - args.epsilon)/args.n_epsilon_decay, args.epsilon)
+
+                if i_total_step >= args.n_start_train:
                     ai1 = agent.action_of(si)
                 else:
                     eps, agent.epsilon = agent.epsilon, 1
                     ai1 = agent.action_of(si)
                     agent.epsilon = eps
                 si1, ri1, done, debug_info = env.step(ai1)
-                metric = agent.train(si, ai1, ri1, si1, done)
+                metric = agent.push(si, ai1, ri1, si1, done)
+                if i_total_step >= args.n_start_train:
+                    metric = agent.train()
                 if i_step%args.n_log_steps == 0 and (metric is not None):
                     metric["td"] = np.mean(metric["td"].data.numpy()**2)
                     step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
                     logger.info(f"loss, mean(td^2)\t{metric['loss'].data.numpy()[0]}\t{metric['td']}")
                 si = si1
+                if i_total_step%args.n_target_update_interval == 0:
+                    agent.update_target_model()
                 if done or (i_step > args.n_steps):
                     print(i_episode, i_step, sep="\t", file=fp)
                     fp.flush()
                     episode_result_list.append(dict(i_episode=i_episode, n_steps=i_step, env_seed=env_seed, step_result_list=step_result_list))
                     break
-            if i_episode%args.n_target_update_episodes == 0:
-                agent.update_target_model()
-            if i_episode%10 == 0 and agent.replay_memory.filled():
-                pass
 
 
 def _parse_argv(argv):
@@ -341,8 +345,9 @@ def _parse_argv(argv):
     parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-middle", required=True, type=int, help="Number of units in a hidden layer.")
     parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
+    parser.add_argument("--n-start-train", required=True, type=int, help="Number of steps to fill the replay memory.")
     parser.add_argument("--n-steps", required=True, type=int, help="Number of steps to run per episode.")
-    parser.add_argument("--n-target-update-episodes", required=True, type=int, help="Number of episodes to update the target network.")
+    parser.add_argument("--n-target-update-interval", required=True, type=int, help="Update the target network every this interval.")
     parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
     parser.add_argument("--replay-memory-seed", required=True, type=int, help="Random state for minibatch.")
     parser.add_argument("--torch-seed", required=True, type=int, help="Seed for PyTorch.")
