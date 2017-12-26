@@ -316,7 +316,7 @@ def run(args, env):
 
 
 def _parse_argv(argv):
-    logger.debug(f"argv\t{argv}")
+    logger.info(f"argv\t{argv}")
     doc = f"""
     {__file__}
     """
@@ -349,7 +349,7 @@ def _parse_argv(argv):
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args(argv)
-    logger.debug(f"args\t{args}")
+    logger.info(f"args\t{args}")
     assert args.n_batch <= args.n_replay_memory, (args.n_batch, args.n_replay_memory)
     assert 0 < args.alpha, args.alpha
     assert 0 < args.n_epsilon_decay
