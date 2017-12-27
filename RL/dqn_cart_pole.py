@@ -105,7 +105,8 @@ class DQNAgent(object):
         self.opt.zero_grad()
         loss.backward()
         self.opt.step()
-        return dict(td=td, loss=loss)
+        # Do not keep reference for variables possibly on a GPU
+        return dict(td=td.data.numpy(), loss=loss.data.numpy(), q_pred=q_pred_const.data.numpy())
 
     def _v_hat_si1_of(self, batch):
         self.model.eval()
@@ -306,16 +307,16 @@ def run(args, env):
                 if i_total_step >= args.n_start_train:
                     metric = agent.train()
                 if i_step%args.n_log_steps == 0 and (metric is not None):
-                    metric["td"] = np.mean(metric["td"].data.numpy()**2)
-                    step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
-                    logger.info(f"loss, mean(td^2)\t{metric['loss'].data.numpy()[0]}\t{metric['td']}")
+                    metric["td"] = np.mean(metric["td"]**2)
+                    # step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
+                    logger.info(f"loss, mean(td^2)\t{metric['loss'][0]}\t{metric['td']}")
                 si = si1
                 if i_total_step%args.n_target_update_interval == 0:
                     agent.update_target_model()
                 if done or (i_step > args.n_steps):
                     print(i_episode, i_step, sep="\t", file=fp)
                     fp.flush()
-                    episode_result_list.append(dict(i_episode=i_episode, n_steps=i_step, env_seed=env_seed, step_result_list=step_result_list))
+                    # episode_result_list.append(dict(i_episode=i_episode, n_steps=i_step, env_seed=env_seed, step_result_list=step_result_list))
                     break
 
 
