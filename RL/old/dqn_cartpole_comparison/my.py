@@ -6,20 +6,18 @@ import copy
 import datetime
 import itertools
 import logging
+import math
 import os
 import random
 import sys
 
 import torch
-import matplotlib
-matplotlib.use("agg")
 import gym
 import numpy as np
 
 
 __version__ = "0.1.0"
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 
 var = torch.autograd.Variable
@@ -62,14 +60,14 @@ class DQNAgent(object):
         self.replay_memory = replay_memory
         self.source = source # for record
         self.random_state = random_state
-        self.rng = np.random.RandomState(self.random_state)
+        self.rng = np.random #.RandomState(self.random_state)
         assert n_batch > 0
         self.n_batch = n_batch
         self.q_target_mode = q_target_mode
         self.dqn_mode = dqn_mode
 
     def action_of(self, si):
-        if self.rng.rand() <= self.epsilon:
+        if self.rng.rand() < self.epsilon:
             return self.rng.randint(self.model.output.out_features)
         else:
             # LongTensor([int, int64, int, ...]) is not allowed
@@ -85,11 +83,13 @@ class DQNAgent(object):
         self.replay_memory.push((si, ai1, ri1, si1, done))
 
     def train(self):
-        if self.replay_memory.filled():
-            return self.optimize()
-
-    def optimize(self):
-        batch = Transition(*zip(*self.replay_memory.sample(self.n_batch)))
+        if len(self.replay_memory.buffer) < self.n_batch:
+            return
+        # batch = self.replay_memory.sample(self.n_batch - 1)
+        # batch.append(self.replay_memory.buffer[self.replay_memory.pointer])
+        batch = self.replay_memory.sample(self.n_batch)
+        # batch.append(self.replay_memory.buffer[self.replay_memory.pointer])
+        batch = Transition(*zip(*batch))
         v_hat_si1 = self._v_hat_si1_of(batch)
         q_bellman = (var(self._float_tensor(batch.ri1)) + self.gamma*v_hat_si1).view(self.n_batch, -1)
 
@@ -108,7 +108,8 @@ class DQNAgent(object):
         self.opt.zero_grad()
         loss.backward()
         self.opt.step()
-        return dict(td=td, loss=loss)
+        # Do not keep reference for variables possibly on a GPU
+        return dict(td=td.data.numpy(), loss=loss.data.numpy(), q_pred=q_pred_const.data.numpy())
 
     def _v_hat_si1_of(self, batch):
         self.model.eval()
@@ -118,14 +119,15 @@ class DQNAgent(object):
         non_final_si1 = [x for x, done in zip(batch.si1, batch.done) if not done]
         if non_final_si1:
             mask = self._byte_tensor([not x for x in batch.done])
+            non_final_si1 = var(self._float_tensor(non_final_si1), volatile=True)
             if self.dqn_mode == "dqn":
-                self.target_model.eval()
-                v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[0]
+                self.model.eval()
+                v_hat_si1[mask] = self.model(non_final_si1).max(1)[0]
             elif self.dqn_mode == "doubledqn":
                 self.model.eval()
-                actions = self.model(var(self._float_tensor(non_final_si1), volatile=True)).max(1)[1]
+                actions = self.model(non_final_si1).max(1)[1]
                 self.target_model.eval()
-                v_hat_si1[mask] = self.target_model(var(self._float_tensor(non_final_si1), volatile=True)).gather(1, actions.view(-1, 1))
+                v_hat_si1[mask] = self.target_model(non_final_si1).gather(1, actions.view(-1, 1))
             else:
                 raise ValueError(f"Unsupported self.dqn_mode: {self.dqn_mode}")
         v_hat_si1.volatile = False # used as a constant later
@@ -147,21 +149,27 @@ class ReplayMemory(object):
         assert capacity > 0, capacity
         self.capacity = capacity
         # si, ai1, ri1, si1, done
-        self.buffer = [None]*self.capacity
-        self.pointer = 0
+        self.buffer = []
+        self.pointer = -1
         self.random_state = random_state # for record
-        self.rng = random.Random(self.random_state)
+        self.rng = random #.Random(self.random_state)
 
     def push(self, x):
-        self.buffer[self.pointer] = x
-        self.pointer = (self.pointer + 1)%self.capacity
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(x)
+        else:
+            self.pointer = (self.pointer + 1)%self.capacity
+            self.buffer[self.pointer] = x
+        # if self.buffer[self.pointer] is None:
+        #     self.buffer[self.pointer] = x
+        #     self.pointer = (self.pointer + 1)%self.capacity
+        # else:
+        #     self.pointer = (self.pointer + self.rng.randint(0, self.capacity - 1))%self.capacity
+        #     self.buffer[self.pointer] = x
         return self
 
     def sample(self, n):
         return self.rng.sample(self.buffer, n)
-
-    def filled(self):
-        return self.buffer[self.pointer] is not None
 
 
 class Swish(torch.nn.Module):
@@ -188,22 +196,45 @@ class Log1p(torch.nn.Module):
         return self.__class__.__name__ + ' ()'
 
 
+class Exp(torch.nn.Module):
+
+    def forward(self, input):
+        return torch.exp(input)
+
+    def __repr__(self):
+        return self.__class__.__name__ + " ()"
+
+
+class Scale(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.logscale = torch.nn.Parameter(torch.zeros(1, 1))
+
+    def forward(self, input):
+        return input*torch.exp(self.logscale)
+
+    def __repr__(self):
+        return self.__calss__.__name__ + " ()"
+
+
 def main(argv):
     args = _parse_argv(argv[1:])
     _add_handlers(logger, args.log_file, args.log_stderr_level, args.log_file_level)
     logger.info(f"args\t{args}")
-    env = gym.make("MountainCar-v0")
+    env = gym.make("CartPole-v0")
     run(args, env)
 
 
 def run(args, env):
-    torch.manual_seed(args.torch_seed)
+    # torch.manual_seed(args.torch_seed)
 
     n_input = env.observation_space.shape[0]
     n_output = env.action_space.n
     logger.info(f"n_input, args.n_middle, n_output\t{n_input, args.n_middle, n_output}")
     namer = _make_namer()
     # act = Swish
+    # act = torch.nn.ReLU
     act = torch.nn.Tanh
     # bn = lambda : torch.nn.BatchNorm1d(num_features=args.n_middle, momentum=1e-4, affine=True)
     # act = Log1p
@@ -212,11 +243,22 @@ def run(args, env):
         (namer("ac"), act()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
-        (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
-        (namer("ac"), act()),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
+        # (namer("ac"), act()),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
+        # (namer("ac"), act()),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
+        # (namer("ac"), act()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
         ("output", torch.nn.Linear(args.n_middle, n_output)),
+
+        # (namer("fc"), torch.nn.Linear(args.n_middle, n_output)),
+        # ("output", Exp()),
+
+        # (namer("fc"), torch.nn.Linear(args.n_middle, n_output)),
+        # ("output", Scale()),
+
         # (namer("fc"), torch.nn.Linear(args.n_middle, n_output)),
         # ("output", torch.nn.BatchNorm1d(num_features=n_output, momentum=1e-3, affine=True)),
     )))
@@ -224,10 +266,11 @@ def run(args, env):
     def _init(m):
         if type(m) == torch.nn.Linear:
             torch.nn.init.kaiming_uniform(m.weight.data)
+            m.weight.data.mul_(1/math.sqrt(2))
             m.bias.data.fill_(0)
     model.apply(_init)
-    opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
-    # opt = torch.optim.Adam(model.parameters(), lr=args.lr)
+    # opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+    opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     # opt = torch.optim.RMSprop(model.parameters(), lr=args.lr)
     agent = DQNAgent(
         alpha=args.alpha,
@@ -247,77 +290,45 @@ def run(args, env):
     with open(args.dat_file, "w") as fp:
         i_total_step = -1
         for i_episode, env_seed in zip(range(args.n_episodes), _seed_generator(args.env_seed)):
-            logger.info(f"i_episode\t{i_episode}")
-            env.np_random = np.random.RandomState(env_seed)
-            si = prep_s(env.reset())
+            logger.info(f"i_episode\t{i_episode}\t{agent.epsilon}")
+            # env.np_random = np.random.RandomState(env_seed)
+            si = env.reset()
             step_result_list = []
-            r_acc = 0
-            si1_list = []
             for i_step in itertools.count():
                 i_total_step += 1
-                if agent.replay_memory.filled():
-                    ai1 = agent.action_of(si)
-                else:
-                    eps = agent.epsilon
-                    agent.epsilon = 1
-                    ai1 = agent.action_of(si)
-                    agent.epsilon = eps
+
+                # if (len(agent.replay_memory.buffer) >= agent.n_batch) and (i_total_step >= args.n_start_train):
+                #     agent.epsilon = max(agent.epsilon - (1 - args.epsilon)/args.n_epsilon_decay, args.epsilon)
+
+                ai1 = agent.action_of(si)
+                # if i_total_step >= args.n_start_train:
+                #     ai1 = agent.action_of(si)
+                # else:
+                #     eps, agent.epsilon = agent.epsilon, 1
+                #     ai1 = agent.action_of(si)
+                #     agent.epsilon = eps
                 si1, ri1, done, debug_info = env.step(ai1)
-                r_acc += ri1
-                si1 = prep_s(si1)
-                si1_list.append(si1)
-                agent.push(si, ai1, ri1, si1, done)
-                metric = None
-                if i_total_step%args.n_train_steps:
+                env.render()
+                metric = agent.push(si, ai1, ri1, si1, done)
+                if i_total_step >= args.n_start_train:
                     metric = agent.train()
                 if i_step%args.n_log_steps == 0 and (metric is not None):
-                    metric["td"] = np.mean(metric["td"].data.numpy()**2)
-                    step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
-                    logger.info(f"loss, mean(td^2)\t{metric['loss'].data.numpy()[0]}\t{metric['td']}")
+                    metric["td"] = np.mean(metric["td"]**2)
+                    # step_result_list.append(dict(i_step=i_step, si=si, ai1=ai1, ri1=ri1, si1=si1, metric=metric))
+                    logger.info(f"loss, mean(td^2)\t{metric['loss'][0]}\t{metric['td']}")
                 si = si1
-                if done:
-                    print(i_episode, r_acc, sep="\t", file=fp)
+                if i_total_step%(args.n_target_update_interval - 1) == 0:
+                    agent.update_target_model()
+                if done or (i_step >= (args.n_steps - 1)):
+                    print(i_episode, i_step, sep="\t", file=fp)
+                    print(i_episode, i_step, sep="\t")
                     fp.flush()
-                    episode_result_list.append(dict(i_episode=i_episode, n_steps=i_step, env_seed=env_seed, step_result_list=step_result_list))
+                    # episode_result_list.append(dict(i_episode=i_episode, n_steps=i_step, env_seed=env_seed, step_result_list=step_result_list))
                     break
-            if i_episode%args.n_target_update_episodes == 0:
-                agent.update_target_model()
-            if i_episode%50 == 0 and agent.replay_memory.filled():
-                xs = np.linspace(-1, 1, 20)
-                ys = np.linspace(-1, 1, 20)
-                ss = []
-                for x in xs:
-                    for y in ys:
-                        ss.append([x, y])
-                ss = agent._float_tensor(ss)
-                agent.model.eval()
-                rgbs = agent.model(var(ss, volatile=True)).data.numpy()
-                logger.debug(rgbs)
-                import matplotlib.pyplot as plt
-                import os
-                os.makedirs("qlog", exist_ok=True)
-                fig, ax = plt.subplots()
-                actions = np.argmax(rgbs, axis=1)
-                rgbs[:, :] = 0
-                rgbs[np.array(list(range(len(rgbs)))), actions] = 1
-                # rgbs = np.zeros_like(rgbs)
-                # lo = np.percentile(rgbs, 10)
-                # hi = np.percentile(rgbs, 90)
-                # logger.debug((lo, hi))
-                # rgbs = np.maximum(np.minimum((rgbs - lo)/(hi - lo), 1), 0)
-                ax.scatter(ss.numpy()[:, 0], ss.numpy()[:, 1], c=rgbs, s=30, linewidth=0)
-                ax.plot([x[0] for x in si1_list], [x[1] for x in si1_list])
-                fig.savefig(f"qlog/{i_episode}.pdf", transparent=True)
-                plt.close(fig)
-                pass
-
-
-def prep_s(s):
-    return 2*(s[0] + 1.2)/1.8 - 1, 2*(s[1] + 0.07)/0.14 - 1
 
 
 def _parse_argv(argv):
-    logger.debug(f"argv\t{argv}")
+    logger.info(f"argv\t{argv}")
     doc = f"""
     {__file__}
     """
@@ -338,21 +349,23 @@ def _parse_argv(argv):
     parser.add_argument("--lr", required=True, type=float, help="Learning rate.")
     parser.add_argument("--n-batch", required=True, type=int, help="Batch size.")
     parser.add_argument("--n-episodes", required=True, type=int, help="Number of episodes to run.")
+    parser.add_argument("--n-epsilon-decay", required=True, type=int, help="Number of steps to decay epsilon.")
     parser.add_argument("--n-log-steps", required=True, type=int, help="Record logs per this steps")
     parser.add_argument("--n-middle", required=True, type=int, help="Number of units in a hidden layer.")
     parser.add_argument("--n-replay-memory", required=True, type=int, help="Capacity of the replay memory.")
-    parser.add_argument("--n-target-update-episodes", required=True, type=int, help="Number of episodes to update the target network.")
-    parser.add_argument("--n-train-steps", required=True, type=int, help="Number of steps to update the network.")
+    parser.add_argument("--n-start-train", required=True, type=int, help="Number of steps to fill the replay memory.")
+    parser.add_argument("--n-steps", required=True, type=int, help="Number of steps to run per episode.")
+    parser.add_argument("--n-target-update-interval", required=True, type=int, help="Update the target network every this interval.")
     parser.add_argument("--q-target-mode", required=False, default="mnih2015", type=str, choices=["mnih2015", "td"], help="Implicit vs explicit α.")
     parser.add_argument("--replay-memory-seed", required=True, type=int, help="Random state for minibatch.")
     parser.add_argument("--torch-seed", required=True, type=int, help="Seed for PyTorch.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args(argv)
-    logger.debug(f"args\t{args}")
+    logger.info(f"args\t{args}")
     assert args.n_batch <= args.n_replay_memory, (args.n_batch, args.n_replay_memory)
     assert 0 < args.alpha, args.alpha
-    assert 0 < args.n_train_steps
+    assert 0 < args.n_epsilon_decay
     return args
 
 
@@ -378,6 +391,7 @@ def _make_namer():
 
 
 def _add_handlers(logger, path, level_stderr, level_path):
+    logger.setLevel(logging.DEBUG)
     fmt = logging.Formatter("%(levelname)s\t%(process)d\t%(asctime)s\t%(filename)s\t%(funcName)s\t%(lineno)d\t%(message)s")
 
     hdl = logging.StreamHandler(sys.stderr)

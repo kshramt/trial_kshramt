@@ -30,6 +30,7 @@ end
 function go(maze, out, seed)
     srand(seed)
     γ = 0.95
+    γ = 0.99
     α = 0.05
     Q = zeros(Float64, (size(maze)..., 4))
 

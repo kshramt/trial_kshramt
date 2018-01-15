@@ -248,15 +248,16 @@ def run(args, maze):
     n_output = 2**maze.ndim
     logger.info(f"n_input, args.n_middle, n_output\t{n_input, args.n_middle, n_output}")
     namer = _make_namer()
-    act = Swish
+    # act = Swish
+    act = torch.nn.Tanh
     # bn = lambda : torch.nn.BatchNorm1d(num_features=args.n_middle, momentum=1e-3, affine=False)
     # act = Log1p
     model = torch.nn.Sequential(collections.OrderedDict((
         (namer("fc"), torch.nn.Linear(n_input, args.n_middle)),
         (namer("ac"), act()),
-        # (namer("bn"), bn()),
-        (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
-        (namer("ac"), act()),
+        # # (namer("bn"), bn()),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
+        # (namer("ac"), act()),
         # (namer("bn"), bn()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
@@ -272,7 +273,8 @@ def run(args, maze):
            m.bias.data.fill_(0)
     model.apply(_init)
     # opt = torch.optim.SGD(model.parameters(), lr=3e-4, momentum=1e-1)
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr)
+    opt = torch.optim.Adam(model.parameters(), lr=args.lr, eps=1e-2)
+    # opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     # opt = torch.optim.RMSprop(model.parameters(), lr=args.lr)
     agent = DQNAgent(
         alpha=args.alpha,

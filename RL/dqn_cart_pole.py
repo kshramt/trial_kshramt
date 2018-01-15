@@ -105,6 +105,11 @@ class DQNAgent(object):
         self.opt.zero_grad()
         loss.backward()
         self.opt.step()
+        self.model.eval()
+        q_pred_after = self.model(var(self._float_tensor(batch.si))).gather(1, var(self._long_tensor(batch.ai1).view(-1, 1)))
+        if random.random() < 0.1:
+            print("err bef aft", np.mean((q_pred - q_target).data.numpy()**2), np.mean((q_pred_after - q_target).data.numpy()**2), "\t")
+            print("q_pred, q_target", torch.cat([q_pred, q_pred_after, q_target], dim=1), "\t")
         # Do not keep reference for variables possibly on a GPU
         return dict(td=td.data.numpy(), loss=loss.data.numpy(), q_pred=q_pred_const.data.numpy())
 
@@ -112,21 +117,21 @@ class DQNAgent(object):
         self.model.eval()
         # Instead of adding Q(terminal state, any action) = 0 in training data,
         # we directly use that fact to reduce approximation errors.
-        v_hat_si1 = var(torch.zeros(self.n_batch), volatile=True)
-        non_final_si1 = [x for x, done in zip(batch.si1, batch.done) if not done]
-        if non_final_si1:
-            mask = self._byte_tensor([not x for x in batch.done])
-            non_final_si1 = var(self._float_tensor(non_final_si1), volatile=True)
-            if self.dqn_mode == "dqn":
-                self.model.eval()
-                v_hat_si1[mask] = self.model(non_final_si1).max(1)[0]
-            elif self.dqn_mode == "doubledqn":
-                self.model.eval()
-                actions = self.model(non_final_si1).max(1)[1]
-                self.target_model.eval()
-                v_hat_si1[mask] = self.target_model(non_final_si1).gather(1, actions.view(-1, 1))
-            else:
-                raise ValueError(f"Unsupported self.dqn_mode: {self.dqn_mode}")
+
+        # v_hat_si1 = var(torch.zeros(self.n_batch), volatile=True)
+        # non_final_si1 = [x for x, done in zip(batch.si1, batch.done) if not done]
+        si1 = var(self._float_tensor(batch.si1), volatile=True)
+        mask = var(self._float_tensor([not x for x in batch.done]), volatile=True)
+        if self.dqn_mode == "dqn":
+            self.model.eval()
+            v_hat_si1 = mask*self.model(si1).max(1)[0]
+        elif self.dqn_mode == "doubledqn":
+            self.model.eval()
+            actions = self.model(si1).max(1)[1]
+            self.target_model.eval()
+            v_hat_si1 = mask*self.target_model(si1).gather(1, actions.view(-1, 1)).view(-1)
+        else:
+            raise ValueError(f"Unsupported self.dqn_mode: {self.dqn_mode}")
         v_hat_si1.volatile = False # used as a constant later
         return v_hat_si1
 
@@ -240,12 +245,12 @@ def run(args, env):
         (namer("ac"), act()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
-        (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
-        (namer("ac"), act()),
-        (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
-        (namer("ac"), act()),
-        (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
-        (namer("ac"), act()),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
+        # (namer("ac"), act()),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
+        # (namer("ac"), act()),
+        # (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
+        # (namer("ac"), act()),
         (namer("fc"), torch.nn.Linear(args.n_middle, args.n_middle)),
         (namer("ac"), act()),
         ("output", torch.nn.Linear(args.n_middle, n_output)),
@@ -265,7 +270,7 @@ def run(args, env):
             torch.nn.init.kaiming_uniform(m.weight.data)
             m.bias.data.fill_(0)
     model.apply(_init)
-    # opt = torch.optim.SGD(model.parameters(), lr=args.lr)
+    # opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     # opt = torch.optim.RMSprop(model.parameters(), lr=args.lr)
     agent = DQNAgent(

@@ -7,6 +7,19 @@ using FileIO
 function main(args)
     data = FileIO.load(args[1])
     Q, maze = data["Q"], data["maze"]
+    # print("[\n")
+    # for i in 1:size(Q, 1)
+    #     print("    [\n")
+    #     for j in 1:size(Q, 1)
+    #         print("        [")
+    #         for k in 1:size(Q, 3)
+    #             print(Q[i, j, k], ", ")
+    #         end
+    #         print("],\n")
+    #     end
+    #     print("    ],\n")
+    # end
+    # print("]\n")
     for i in 1:size(Q, 1)
         for j in 1:size(Q, 2)
             print("    ")
