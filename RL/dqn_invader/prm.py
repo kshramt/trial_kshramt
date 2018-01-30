@@ -3,7 +3,6 @@
 import collections
 import logging
 import random
-import sys
 
 import numpy as np
 
@@ -45,12 +44,7 @@ class PrioritizedReplayMemory(object):
         for i in range(len(self) - 1, 0, -1):
             self._swap(0, i)
             self._push_down(0, limit=i)
-        if self.is_full():
-            self.heap.reverse()
-            self.index_ring_buffer.reverse()
-        else:
-            self.heap[:len(self)] = list(reversed(self.heap[:len(self)]))
-            self.index_ring_buffer[:len(self)] = list(reversed(self.index_ring_buffer[:len(self)]))
+        self._reverse()
 
     def push(self, x):
         assert x is not None
@@ -58,8 +52,7 @@ class PrioritizedReplayMemory(object):
         if self.is_full():
             ih = self.index_ring_buffer[self.pointer]
             self.heap[ih] = he
-            self._push_down(ih)
-            self._push_up(ih)
+            self.fixup(ih)
         else:
             self.index_ring_buffer[self.pointer] = self.pointer
             self.heap[self.pointer] = he
@@ -67,7 +60,7 @@ class PrioritizedReplayMemory(object):
         self.pointer = (self.pointer + 1)%self.capacity
         return self
 
-    def to_list_heap(self, limit=None):
+    def heap_to_list(self, limit=None):
         if limit is None:
             limit = len(self)
         return [x.v for x in self.heap[:limit]]
@@ -115,10 +108,20 @@ class PrioritizedReplayMemory(object):
             self._swap(i, imax)
             i = imax
 
+    def _reverse(self):
+        n = len(self)
+        if n < 2:
+            return
+        # 0 1 2 3 4 5 6 7
+        # - - 0 0 1 2 3 3
+        nm1 = n - 1
+        for i in range(n//2):
+            self._swap(i, nm1 - i)
+
     def _swap(self, i, j):
-        ii, ij = self.heap[i].i, self.heap[j].i
+        ii, ji = self.heap[i].i, self.heap[j].i
         self.heap[j], self.heap[i] = self.heap[i], self.heap[j]
-        self.index_ring_buffer[ij], self.index_ring_buffer[ii] = self.index_ring_buffer[ii], self.index_ring_buffer[ij]
+        self.index_ring_buffer[ji], self.index_ring_buffer[ii] = self.index_ring_buffer[ii], self.index_ring_buffer[ji]
 
 
 # todo: This is not good at all.
@@ -216,35 +219,65 @@ def _parent(i):
 def _test():
     import doctest
     doctest.testmod(raise_on_error=True, verbose=True)
-    n = 2000
-    a = list(range(n))
-    import random
-    random.shuffle(a)
-    prm = PrioritizedReplayMemory(n, 10, 1, 42)
-    for x in a:
-        prm.push(x)
-    _is_heap(prm.to_list_heap())
-    prm.sort()
-    _is_sorted(prm.to_list_heap())
-    print(prm._partitions)
-    print(prm.sample())
 
-    # push more than capacity
-    b = list(range(2*n))
-    random.shuffle(b)
-    for x in b:
-        prm.push(x)
-    _is_heap(prm.to_list_heap())
-    prm.sort()
-    _is_sorted(prm.to_list_heap())
+    def let(f):
+        f()
 
-    # queue-ness
-    prm = PrioritizedReplayMemory(3, 2, 1, 42)
-    for i in range(10):
-        prm.push(i)
-    assert set(prm.to_list_heap()) == set([7, 8, 9]), prm.to_list_heap()
+    @let
+    def _():
+        n = 2000
+        a = list(range(n))
+        import random
+        random.shuffle(a)
+        prm = PrioritizedReplayMemory(n, 10, 1, 42)
+        for x in a:
+            prm.push(x)
+        _is_heap(prm.heap_to_list())
+        prm.sort()
+        _is_sorted(prm.heap_to_list())
 
-    print(_partitions_of(100, 5, 1))
+    @let
+    def push_more_than_capacity():
+        n = 2000
+        prm = PrioritizedReplayMemory(n, 10, 1, 42)
+        b = list(range(10*n))
+        random.shuffle(b)
+        for x in b:
+            prm.push(x)
+        _is_heap(prm.heap_to_list())
+        prm.sort()
+        _is_sorted(prm.heap_to_list())
+
+    @let
+    def queue_ness():
+        capacity = 40
+        prm = PrioritizedReplayMemory(capacity, 10, 1, 42)
+        for _ in range(10):
+            a = [random.random() for _ in range(200)]
+            for x in a:
+                prm.push(x)
+            assert set(prm.heap_to_list()) == set(a[-capacity:]), prm.heap_to_list()
+
+    @let
+    def queue_ness_with_sort():
+        capacity = 40
+        prm = PrioritizedReplayMemory(capacity, 10, 1, 42)
+        for i in range(20):
+            print(i)
+            if i%3 == 0:
+                print("halved")
+                n_push = capacity//2
+            else:
+                n_push = capacity*3
+            a = [random.random() for _ in range(n_push)]
+            for x in a:
+                prm.push(x)
+            if i%2 == 0:
+                print("sorted")
+                prm.sort()
+            if i%3 != 0:
+                assert set(prm.heap_to_list()) == set(a[-capacity:]), f"{prm.heap_to_list()}\n{a[-capacity:]}"
+
     # 10000 0.482
     # 20000 0.780
     # 40000 1.788
