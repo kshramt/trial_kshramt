@@ -1,6 +1,6 @@
 An implementation of [Zaliapin and Ben-Zion (2013, JGR)](http://doi.wiley.com/10.1002/jgrb.50179).
 
-This code implements an O(N√N) algorithm and thus is applicable to large catalogs.
+This code implements an `O(N^(3/2))` algorithm and thus is applicable to large catalogs.
 A benchmark result is as follows.
 
 ```
