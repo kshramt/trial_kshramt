@@ -5,10 +5,10 @@ A benchmark result is as follows.
 
 ```
      N  Time (s)  Command
- 20000       3.2  make N_EVENTS=20000
- 40000       8.5  make N_EVENTS=40000
- 80000      22.7  make N_EVENTS=80000
-500000     334.1  make N_EVENTS=500000
+ 20000       3.2  make plot N_EVENTS=20000
+ 40000       8.5  make plot N_EVENTS=40000
+ 80000      22.7  make plot N_EVENTS=80000
+500000     334.1  make plot N_EVENTS=500000
 ```
 
 ```
