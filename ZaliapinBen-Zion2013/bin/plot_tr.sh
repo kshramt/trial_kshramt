@@ -25,7 +25,7 @@ fi
 
 
 "${GNUPLOT:-gnuplot}" -e '
-set term pdf;
+set term png;
 set size ratio -1;
 q = '"$1"';
 plot "< cat" using ($4 - q*$6):($5 - (1 - q)*$6) with dots lc "#cc000000";
