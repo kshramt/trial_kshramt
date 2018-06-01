@@ -23,9 +23,9 @@ A benchmark result is as follows.
 # Usage
 
 ```bash
-make all      # build ./zaliapin_ben_zion_2013.exe
-make plot     # plot figures
-make check    # run test cases
+make all                  # build ./zaliapin_ben_zion_2013.exe
+make plot N_EVENTS=100000 # plot figures for 100,000 events
+make check                # run test cases
 ```
 
 This code uses [GeographicLib](http://geographiclib.sourceforge.net/) to compute distances between events.
