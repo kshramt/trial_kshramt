@@ -9,31 +9,56 @@ __version__ = "0.1.0"
 logger = logging.getLogger(__name__)
 
 
-BLANK = -1
-
-class CTCLoss(torch.nn.Module):
-    """
-    `y_pred`:: Input sequence x Batch x Class.
-    `y_true`:: Output sequence x Batch
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, y_pred, y_true):
-        n_in_seq, n_batch, n_class = y_pred.shape
-        n_out_seq, n_out_batch = y_true.shape
-        assert n_out_seq <= n_in_seq, (n_out_seq, n_in_seq)
-        assert n_out_batch == n_batch, (n_out_batch, n_batch)
-        y_true_ctc = y_ctc_of(y_true, BLANK)
+BLANK = 0
 
 
-def y_ctc_of(y, blank=BLANK):
-    n_seq, n_batch = y.shape
-    y_ctc = torch.empty(size=(2*n_seq + 1, n_batch), dtype=y.dtype, layout=y.layout, device=y.device)
-    y_ctc.fill_(blank)
-    y_ctc[1::2, :] = y
-    return y_ctc
+class CTCLoss1(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, pred, target, blank=BLANK):
+        """
+        CTC loss without mini-batch.
+
+        `pred`:: Sequence x Class.
+        `target`:: Sequence.
+        """
+
+        n_seq_pred, n_class = pred.shape
+        n_seq_target, = target.shape
+        assert n_seq_target <= n_seq_pred, (n_seq_target, n_seq_pred)
+        path = _path_of(target, blank)
+        n_path, = path.shape
+
+        col_prev = torch.empty(n_path + 2)  # path length + padding at the top for transition
+        col_prev.fill_(float("-inf"))
+        col_prev[2] = pred[0, 0]
+        col_prev[3] = pred[0, path[0]]
+
+        for i in range(1, n_seq_pred):
+            col_now = _transition(i, col_prev, pred, target)
+
+    @staticmethod
+    def backward(ctx, grad_outputs):
+        grad, = grad_outputs
+        return ret, None, None, None
+
+
+def _transition(i, col_prev, pred, target):
+    ll = pred[i, target]
+    col_now = torch.empty_like()
+
+
+def _logsumexp(xs):
+    xmax = xs.max()
+    return xmax + (xs - xmax).exp().sum().log()
+
+
+def _path_of(target, blank):
+    n_seq, = target.shape
+    path = torch.empty(size=(2*n_seq + 1,), dtype=target.dtype, layout=target.layout, device=target.device)
+    path.fill_(blank)
+    path[1::2, :] = target
+    return path
 
 
 def beam_search():
