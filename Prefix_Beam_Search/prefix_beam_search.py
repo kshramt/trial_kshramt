@@ -81,14 +81,14 @@ def _logsumexp2(x: cython.double, y: cython.double) -> cython.double:
     m = max(x, y)
     if m <= NINF:
         return NINF
-    return math.log(math.exp(x - m) + math.exp(y - m)) + m
+    return math.log1p(math.exp(x - m) + math.exp(y - m)) + m
 
 
 def _logsumexp3(x: cython.double, y: cython.double, z: cython.double) -> cython.double:
     m = max(x, y, z)
     if m <= NINF:
         return NINF
-    return math.log(math.exp(x - m) + math.exp(y - m) + math.exp(z - m)) + m
+    return math.log1p(math.exp(x - m) + math.exp(y - m) + math.exp(z - m)) + m
 
 
 def main():
