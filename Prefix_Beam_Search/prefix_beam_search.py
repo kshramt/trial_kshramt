@@ -15,14 +15,12 @@ class PrefixBeamSearch(object):
         logpred:: TxC. logpred[:, BLANK] for the blank class.
         """
         self.logpred = logpred
-        # optimized
-        self.cache = {t: dict() for t in range(len(self.logpred))}
-        self.cache[-1] = {NIL: (0, NINF)}
+        self.cache = init_cache(len(self.logpred))
 
     def search(self, width):
         t = -1
         path_new = NIL
-        candidates_prev = [(_logsumexp2(*self.logpb_logpn(t, path_new)), path_new)]
+        candidates_prev = [(_logsumexp2(*logpb_logpn(t, path_new, self.logpred, self.cache)), path_new)]
         class_range = range(len(self.logpred[0]))
         for t in range(len(self.logpred)):
             candidates_new = set()
@@ -31,27 +29,34 @@ class PrefixBeamSearch(object):
                     path_new = path_prev if c == BLANK else path_prev + (c,)
                     if path_new in candidates_new:
                         continue
-                    candidates_new.add((_logsumexp2(*self.logpb_logpn(t, path_new)), path_new))
+                    candidates_new.add((_logsumexp2(*logpb_logpn(t, path_new, self.logpred, self.cache)), path_new))
             candidates_prev = sorted(candidates_new)[-width:]
         for ll, path in candidates_prev:
             yield path, ll
 
-    def logpb_logpn(self, t, path):
-        cache = self.cache[t]
-        if path in cache:
-            return cache[path]
-        if (t < 0) and (path is not NIL):
-            ret = (NINF, NINF)
-            cache[path] = ret
-            return ret
-        logPb_t1_path, logPn_t1_path = self.logpb_logpn(t - 1, path)
 
-        logpred_t = self.logpred[t]  # optimized
-        logPb_t_path = logpred_t[BLANK] + _logsumexp2(logPb_t1_path, logPn_t1_path)
-        logPn_t_path = NINF if path is NIL else logpred_t[path[-1]] + _logsumexp3(logPn_t1_path, *self.logpb_logpn(t - 1, path[:-1]))
-        ret = (logPb_t_path, logPn_t_path)
-        cache[path] = ret
+def init_cache(T):
+    cache = {t: dict() for t in range(T)}
+    cache[-1] = {NIL: (0, NINF)}
+    return cache
+
+
+def logpb_logpn(t, path, logpred, cache):
+    cache_t = cache[t]
+    if path in cache_t:
+        return cache_t[path]
+    if (t < 0) and (path is not NIL):
+        ret = (NINF, NINF)
+        cache_t[path] = ret
         return ret
+    logPb_t1_path, logPn_t1_path = logpb_logpn(t - 1, path, logpred, cache)
+
+    logpred_t = logpred[t]  # optimized
+    logPb_t_path = logpred_t[BLANK] + _logsumexp2(logPb_t1_path, logPn_t1_path)
+    logPn_t_path = NINF if path is NIL else logpred_t[path[-1]] + _logsumexp3(logPn_t1_path, *logpb_logpn(t - 1, path[:-1], logpred, cache))
+    ret = (logPb_t_path, logPn_t_path)
+    cache_t[path] = ret
+    return ret
 
 
 def logsoftmax(x):
@@ -89,6 +94,7 @@ def _rev_list_of(cell):
 
 if __name__ == "__main__":
     pbs = PrefixBeamSearch(logsoftmax(np.random.randn(20, 5000)))
-    print(list(pbs.search(3)))
+    print(list(pbs.search(2)))
+    # print(list(pbs.search(2)))
     # pbs = PrefixBeamSearch(logsoftmax(np.random.randn(100, 10000)))
     # print(list(pbs.search(10)))
