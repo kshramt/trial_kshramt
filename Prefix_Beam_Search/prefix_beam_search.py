@@ -6,7 +6,7 @@ import numpy as np
 
 NINF: cython.double = -float("inf")
 EMPTY = ()
-BLANK: cython.int = 0
+BLANK: int = 0
 
 
 class PrefixBeamSearch(object):
@@ -18,15 +18,15 @@ class PrefixBeamSearch(object):
         self.logpred = logpred
         self.cache = init_cache(len(self.logpred))
 
-    def search(self, width: cython.int):
-        t: cython.int = -1
+    def search(self, width: int):
+        t: int = -1
         path_new = EMPTY
         candidates_prev = [(_logsumexp2(*logpb_logpn(t, path_new, self.logpred, self.cache)), path_new)]
         class_range = range(len(self.logpred[0]))
         for t in range(len(self.logpred)):
             candidates_new = set()
             for _, path_prev in candidates_prev:
-                c: cython.int
+                c: int
                 for c in class_range:
                     path_new = path_prev if c == BLANK else path_prev + (c,)
                     if path_new in candidates_new:
@@ -42,7 +42,7 @@ def init_cache(T):
     return cache
 
 
-def logpb_logpn(t: cython.int, path, logpred, cache):
+def logpb_logpn(t: int, path, logpred, cache):
     cache_t = cache[t]
     if path in cache_t:
         return cache_t[path]
