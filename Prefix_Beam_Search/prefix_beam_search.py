@@ -6,7 +6,7 @@ import numba
 
 
 NINF = -float("inf")
-NIL = None
+NIL = ()
 BLANK = 0
 
 
@@ -29,13 +29,13 @@ class PrefixBeamSearch(object):
             candidates_new = set()
             for _, path_prev in candidates_prev:
                 for c in range(len(self.logpred[0])):
-                    path_new = path_prev if c == BLANK else _Cons(c, path_prev)
+                    path_new = path_prev if c == BLANK else path_prev + (c,)
                     if path_new in candidates_new:
                         continue
                     candidates_new.add((_logsumexp2(*self.logpb_logpn(t, path_new)), path_new))
             candidates_prev = sorted(candidates_new)[-width:]
-        for ll, cell in candidates_prev:
-            yield _rev_list_of(cell), ll
+        for ll, path in candidates_prev:
+            yield path, ll
 
     def logpb_logpn(self, t, path):
         cache = self.cache[t]
@@ -44,38 +44,15 @@ class PrefixBeamSearch(object):
         if (t < 0) and (path is not NIL):
             ret = (NINF, NINF)
             cache[path] = ret
-            # print(ret, t, path)
             return ret
         logPb_t1_path, logPn_t1_path = self.logpb_logpn(t - 1, path)
 
         logpred_t = self.logpred[t]  # optimized
         logPb_t_path = logpred_t[BLANK] + _logsumexp2(logPb_t1_path, logPn_t1_path)
-        if path is NIL:
-            logPn_t_path = NINF
-        else:
-            logPn_t_path = logpred_t[path.l] + _logsumexp3(logPn_t1_path, *self.logpb_logpn(t - 1, path.r))
+        logPn_t_path = NINF if path is NIL else logpred_t[path[-1]] + _logsumexp3(logPn_t1_path, *self.logpb_logpn(t - 1, path[:-1]))
         ret = (logPb_t_path, logPn_t_path)
         cache[path] = ret
-        # print(ret, t, path)
         return ret
-
-
-class _Cons(object):
-    __slots__ = ["h", "l", "r"]
-
-    def __init__(self, l, r):
-        self.h = hash((self.__class__, l, r))
-        self.l = l
-        self.r = r
-
-    def __hash__(self):
-        return self.h
-
-    def __eq__(self, other):
-        return (self.l == other.l) and (self.r == other.r)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.l)}, {repr(self.r)})"
 
 
 @numba.jit
@@ -115,5 +92,7 @@ def _rev_list_of(cell):
 
 
 if __name__ == "__main__":
-    pbs = PrefixBeamSearch(logsoftmax(np.random.randn(100, 10000)))
-    print(list(pbs.search(10)))
+    pbs = PrefixBeamSearch(logsoftmax(np.random.randn(20, 5000)))
+    print(list(pbs.search(3)))
+    # pbs = PrefixBeamSearch(logsoftmax(np.random.randn(100, 10000)))
+    # print(list(pbs.search(10)))
