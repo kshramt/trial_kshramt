@@ -25,10 +25,11 @@ class PrefixBeamSearch(object):
         t = -1
         path_new = NIL
         candidates_prev = [(_logsumexp2(*self.logpb_logpn(t, path_new)), path_new)]
+        class_range = range(len(self.logpred[0]))
         for t in range(len(self.logpred)):
             candidates_new = set()
             for _, path_prev in candidates_prev:
-                for c in range(len(self.logpred[0])):
+                for c in class_range:
                     path_new = path_prev if c == BLANK else path_prev + (c,)
                     if path_new in candidates_new:
                         continue
