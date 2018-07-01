@@ -62,7 +62,7 @@ def logpb_logpn(t: int, path, logpred, cache):
     c_last = path[-1]
     logPb_t1_path1, logPn_t1_path1 = logpb_logpn(t - 1, path[:-1], logpred, cache)
     if (len(path) > 1) and path[-2] == c_last:
-        logPn_t_path = logpred_t[c_last] + _logsumexp2(logPn_t1_path,                 logPb_t1_path1)
+        logPn_t_path = logpred_t[c_last] + _logsumexp2(logPn_t1_path, logPb_t1_path1,               )
     else:
         logPn_t_path = logpred_t[c_last] + _logsumexp3(logPn_t1_path, logPb_t1_path1, logPn_t1_path1)
     ret = (logPb_t_path, logPn_t_path)
