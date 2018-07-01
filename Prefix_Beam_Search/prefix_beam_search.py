@@ -104,6 +104,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # print(list(pbs.search(2)))
-    # pbs = PrefixBeamSearch(logsoftmax(np.random.randn(100, 10000)))
-    # print(list(pbs.search(10)))
