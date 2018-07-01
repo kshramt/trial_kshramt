@@ -45,15 +45,25 @@ def logpb_logpn(t, path, logpred, cache):
     cache_t = cache[t]
     if path in cache_t:
         return cache_t[path]
-    if (t < 0) and (path is not EMPTY):
+    if path is EMPTY:
+        logPb_t1_empty, logPn_t1_empty = cache[t - 1][EMPTY]
+        ret = (logpred[t][BLANK] + logPb_t1_empty, NINF)
+        cache_t[path] = ret
+        return ret
+    if t < 0:
         ret = (NINF, NINF)
         cache_t[path] = ret
         return ret
-    logPb_t1_path, logPn_t1_path = logpb_logpn(t - 1, path, logpred, cache)
 
+    logPb_t1_path, logPn_t1_path = logpb_logpn(t - 1, path, logpred, cache)
     logpred_t = logpred[t]  # optimized
     logPb_t_path = logpred_t[BLANK] + _logsumexp2(logPb_t1_path, logPn_t1_path)
-    logPn_t_path = NINF if path is EMPTY else logpred_t[path[-1]] + _logsumexp3(logPn_t1_path, *logpb_logpn(t - 1, path[:-1], logpred, cache))
+    c_last = path[-1]
+    logPb_t1_path1, logPn_t1_path1 = logpb_logpn(t - 1, path[:-1], logpred, cache)
+    if (len(path) > 1) and path[-2] == c_last:
+        logPn_t_path = logpred_t[c_last] + _logsumexp2(logPn_t1_path,                 logPb_t1_path1)
+    else:
+        logPn_t_path = logpred_t[c_last] + _logsumexp3(logPn_t1_path, logPb_t1_path1, logPn_t1_path1)
     ret = (logPb_t_path, logPn_t_path)
     cache_t[path] = ret
     return ret
@@ -80,11 +90,19 @@ def _logsumexp3(x, y, z):
     return math.log(math.exp(x - m) + math.exp(y - m) + math.exp(z - m)) + m
 
 
+def main():
+    np.random.seed(42)
+    logpred = np.random.randn(60, 10000)
+    logpred[:, 0] += 1/2
+    logpred[:, 1] += 4
+    pbs = PrefixBeamSearch(logsoftmax(logpred))
+    ret = list(pbs.search(5))
+    for r in ret:
+        print(len(r[0]), r)
 
 
 if __name__ == "__main__":
-    pbs = PrefixBeamSearch(logsoftmax(np.random.randn(20, 5000)))
-    print(list(pbs.search(2)))
+    main()
     # print(list(pbs.search(2)))
     # pbs = PrefixBeamSearch(logsoftmax(np.random.randn(100, 10000)))
     # print(list(pbs.search(10)))
