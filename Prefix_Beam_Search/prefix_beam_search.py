@@ -1,11 +1,12 @@
 import math
 
+import cython
 import numpy as np
 
 
-NINF = -float("inf")
+NINF: cython.double = -float("inf")
 EMPTY = ()
-BLANK = 0
+BLANK: cython.int = 0
 
 
 class PrefixBeamSearch(object):
@@ -17,22 +18,22 @@ class PrefixBeamSearch(object):
         self.logpred = logpred
         self.cache = init_cache(len(self.logpred))
 
-    def search(self, width):
-        t = -1
+    def search(self, width: cython.int):
+        t: cython.int = -1
         path_new = EMPTY
         candidates_prev = [(_logsumexp2(*logpb_logpn(t, path_new, self.logpred, self.cache)), path_new)]
         class_range = range(len(self.logpred[0]))
         for t in range(len(self.logpred)):
             candidates_new = set()
             for _, path_prev in candidates_prev:
+                c: cython.int
                 for c in class_range:
                     path_new = path_prev if c == BLANK else path_prev + (c,)
                     if path_new in candidates_new:
                         continue
                     candidates_new.add((_logsumexp2(*logpb_logpn(t, path_new, self.logpred, self.cache)), path_new))
             candidates_prev = sorted(candidates_new)[-width:]
-        for ll, path in candidates_prev:
-            yield path, ll
+        return [(path, ll) for ll, path in candidates_prev]
 
 
 def init_cache(T):
@@ -41,7 +42,7 @@ def init_cache(T):
     return cache
 
 
-def logpb_logpn(t, path, logpred, cache):
+def logpb_logpn(t: cython.int, path, logpred, cache):
     cache_t = cache[t]
     if path in cache_t:
         return cache_t[path]
@@ -76,14 +77,14 @@ def logsoftmax(x):
     return x - np.log(z)
 
 
-def _logsumexp2(x, y):
+def _logsumexp2(x: cython.double, y: cython.double) -> cython.double:
     m = max(x, y)
     if m <= NINF:
         return NINF
     return math.log(math.exp(x - m) + math.exp(y - m)) + m
 
 
-def _logsumexp3(x, y, z):
+def _logsumexp3(x: cython.double, y: cython.double, z: cython.double) -> cython.double:
     m = max(x, y, z)
     if m <= NINF:
         return NINF
@@ -92,11 +93,11 @@ def _logsumexp3(x, y, z):
 
 def main():
     np.random.seed(42)
-    logpred = np.random.randn(60, 10000)
+    logpred = np.random.randn(100, 200)
     logpred[:, 0] += 1/2
     logpred[:, 1] += 4
     pbs = PrefixBeamSearch(logsoftmax(logpred))
-    ret = list(pbs.search(5))
+    ret = pbs.search(5)
     for r in ret:
         print(len(r[0]), r)
 
