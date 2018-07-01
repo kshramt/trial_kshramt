@@ -4,7 +4,7 @@ import numpy as np
 
 
 NINF = -float("inf")
-NIL = ()
+EMPTY = ()
 BLANK = 0
 
 
@@ -19,7 +19,7 @@ class PrefixBeamSearch(object):
 
     def search(self, width):
         t = -1
-        path_new = NIL
+        path_new = EMPTY
         candidates_prev = [(_logsumexp2(*logpb_logpn(t, path_new, self.logpred, self.cache)), path_new)]
         class_range = range(len(self.logpred[0]))
         for t in range(len(self.logpred)):
@@ -37,7 +37,7 @@ class PrefixBeamSearch(object):
 
 def init_cache(T):
     cache = {t: dict() for t in range(T)}
-    cache[-1] = {NIL: (0, NINF)}
+    cache[-1] = {EMPTY: (0, NINF)}
     return cache
 
 
@@ -45,7 +45,7 @@ def logpb_logpn(t, path, logpred, cache):
     cache_t = cache[t]
     if path in cache_t:
         return cache_t[path]
-    if (t < 0) and (path is not NIL):
+    if (t < 0) and (path is not EMPTY):
         ret = (NINF, NINF)
         cache_t[path] = ret
         return ret
@@ -53,7 +53,7 @@ def logpb_logpn(t, path, logpred, cache):
 
     logpred_t = logpred[t]  # optimized
     logPb_t_path = logpred_t[BLANK] + _logsumexp2(logPb_t1_path, logPn_t1_path)
-    logPn_t_path = NINF if path is NIL else logpred_t[path[-1]] + _logsumexp3(logPn_t1_path, *logpb_logpn(t - 1, path[:-1], logpred, cache))
+    logPn_t_path = NINF if path is EMPTY else logpred_t[path[-1]] + _logsumexp3(logPn_t1_path, *logpb_logpn(t - 1, path[:-1], logpred, cache))
     ret = (logPb_t_path, logPn_t_path)
     cache_t[path] = ret
     return ret
@@ -80,16 +80,6 @@ def _logsumexp3(x, y, z):
     return math.log(math.exp(x - m) + math.exp(y - m) + math.exp(z - m)) + m
 
 
-def _rev_list_of(cell):
-    ret = []
-    while True:
-        if cell is NIL:
-            break
-        l, r = cell.l, cell.r
-        ret.append(l)
-        cell = r
-    ret.reverse()
-    return ret
 
 
 if __name__ == "__main__":
