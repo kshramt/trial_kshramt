@@ -1,8 +1,6 @@
 import math
-import sys
 
 import numpy as np
-import numba
 
 
 NINF = -float("inf")
@@ -56,7 +54,6 @@ class PrefixBeamSearch(object):
         return ret
 
 
-@numba.jit
 def logsoftmax(x):
     xmax = x.max(axis=1, keepdims=True)
     x = x - xmax
@@ -64,7 +61,6 @@ def logsoftmax(x):
     return x - np.log(z)
 
 
-@numba.jit
 def _logsumexp2(x, y):
     m = max(x, y)
     if m <= NINF:
@@ -72,7 +68,6 @@ def _logsumexp2(x, y):
     return math.log(math.exp(x - m) + math.exp(y - m)) + m
 
 
-@numba.jit
 def _logsumexp3(x, y, z):
     m = max(x, y, z)
     if m <= NINF:
