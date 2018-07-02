@@ -78,58 +78,17 @@ def logsoftmax(x):
 
 
 def _logsumexp2(x: cython.double, y: cython.double):
-    if x > y:
-        return x + math.log1p(math.exp(y - x))
-    elif y <= NINF:
+    m = max(x, y)
+    if m == NINF:
         return NINF
-    else:
-        return y + math.log1p(math.exp(x - y))
+    return m + math.log(math.exp(x - m) + math.exp(y - m))
 
 
 def _logsumexp3(x: cython.double, y: cython.double, z: cython.double):
-    if x > y:
-        if x > z:
-            # x>y>z
-            # x>y=z
-            # x>z>y
-            # x>z=y
-            return x + math.log1p(math.exp(y - x) + math.exp(z - x))
-        else:
-            # z>x>y
-            # z=x>y
-            # x=z>y
-            return z + math.log1p(math.exp(x - z) + math.exp(y - z))
-    elif y > x:
-        if y > z:
-            # y>x>z
-            # y>x=z
-            # y>z>x
-            # y>z=x
-            return y + math.log1p(math.exp(x - y) + math.exp(z - y))
-        else:
-            # y=z>x
-            # z>y>x
-            # z=y>x
-            return z + math.log1p(math.exp(x - z) + math.exp(y - z))
-    elif y > z:
-        # y>x>z
-        # y>x=z
-        # y>z>x
-        # y>z=x
-        # x=y>z
-        # y=x>z
-        return y + math.log1p(math.exp(x - y) + math.exp(z - y))
-    else:
-        # y=z>x
-        # z>y>x
-        # z=y>x
-        # z>x=y
-        # z>y=x
-        # z=y=x
-        if z <= NINF:
-            return NINF
-        else:
-            return z + math.log1p(math.exp(x - z) + math.exp(y - z))
+    m = max(x, y, z)
+    if m == NINF:
+        return NINF
+    return m + math.log(math.exp(x - m) + math.exp(y - m) + math.exp(z - m))
 
 
 def main():
