@@ -22,6 +22,19 @@ A benchmark result is as follows.
 
 # Usage
 
+With Docker:
+
+```bash
+# Make a Docker image
+./build.sh
+# Print help
+docker run --rm kshramt/zaliapin_ben_zion_2013:latest -h
+cat test/syn.in
+docker run --rm -i kshramt/zaliapin_ben_zion_2013:latest < test/syn.in
+```
+
+Without Docker:
+
 ```bash
 make all                  # build ./zaliapin_ben_zion_2013.exe
 make plot N_EVENTS=100000 # plot figures for 100,000 events
