@@ -31,6 +31,7 @@ With Docker:
 docker run --rm kshramt/zaliapin_ben_zion_2013:latest -h
 cat test/syn.in
 docker run --rm -i kshramt/zaliapin_ben_zion_2013:latest < test/syn.in
+# You can also use Singularity (https://www.sylabs.io/guides/3.0/user-guide/) instead of Docker as a rootless container runtime.
 ```
 
 Without Docker:
