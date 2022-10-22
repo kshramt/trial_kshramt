@@ -188,16 +188,18 @@ int main(int argc, char* argv[]) {
 
   // read data
   vector<double> ts, ms, lats, lons;
-  string line;
-  for (string line; getline(cin, line);) {
-    istringstream iss(line);
-    double t, m, lat, lon;
-    iss >> t >> m >> lat >> lon;
-    assert((-90 <= lat) && (lat <= 90));
-    ts.push_back(t);
-    ms.push_back(m);
-    lats.push_back(lat);
-    lons.push_back(lon);
+  {
+    string line;
+    for (; getline(cin, line);) {
+      istringstream iss{line};
+      double t, m, lat, lon;
+      iss >> t >> m >> lat >> lon;
+      assert((-90 <= lat) && (lat <= 90));
+      ts.push_back(t);
+      ms.push_back(m);
+      lats.push_back(lat);
+      lons.push_back(lon);
+    }
   }
 
   const int n = ts.size();
