@@ -171,10 +171,11 @@ int main(int argc, char* argv[]) {
          << endl;
     exit(1);
   }
-  cout.setf(ios_base::scientific, ios_base::floatfield);
-  cout.precision(numeric_limits<double>::max_digits10);
-  cerr.setf(ios_base::scientific, ios_base::floatfield);
-  cerr.precision(numeric_limits<double>::max_digits10);
+  std::ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+  cout.precision(std::numeric_limits<double>::max_digits10);
+  cerr.precision(std::numeric_limits<double>::max_digits10);
+  clog.precision(std::numeric_limits<double>::max_digits10);
 
   // read params
   double b, df;
