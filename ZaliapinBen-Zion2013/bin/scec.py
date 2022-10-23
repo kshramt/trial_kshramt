@@ -8,8 +8,8 @@ import datetime
 def main(argv):
     # do not use events without magnitude information (magnitude = 0.0; see http://service.scedc.caltech.edu/ftp/catalogs/hauksson/Socal_DD/hs_1981_2011_catalog_v01.format)
     events = sorted([e for e in load_scec(sys.stdin) if e[3] != 0], key=lambda e: e[0])
-    for t, m, x, y in events:
-        print(t, '\t', m, '\t', y, '\t', x)
+    for t, m, x, y, d in events:
+        print(t, '\t', m, '\t', y, '\t', x, '\t', d)
 
 
 def load_scec(fh):
@@ -49,6 +49,7 @@ def load_scec(fh):
             float(magnitude),
             float(lon),
             float(lat),
+            float(depth),
         )
 
 

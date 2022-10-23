@@ -12,7 +12,7 @@ export SHELLOPTS := pipefail:errexit:nounset:noclobber
 
 # Specific to this project
 
-AWK := gawk
+AWK := awk
 GNUPLOT := gnuplot
 PYTHON := python3
 CXX := clang++
@@ -58,18 +58,18 @@ diff: work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.
 	mkdir -p $(@D)
 	time $(abspath $<) < $(word 2,$^) >| $@
 
-work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in: work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
+work/mc~$(MC)/n_events~$(N_EVENTS)/b~$(B)/df~$(DF)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.in: work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyxz
 	mkdir -p $(@D)
 	{
 	   echo $(B) $(DF)
 	   tail -n$(N_EVENTS) $<
 	} >| $@
 
-work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx
+work/mc~$(MC)/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyxz: work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyxz
 	mkdir -p $(@D)
 	$(AWK) '$$2 >= $(MC)' $< >| $@
 
-work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: bin/scec.py cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
+work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyxz: bin/scec.py cache/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q
 	mkdir -p $(@D)
 	$(PYTHON) $< < $(word 2,$^) >| $@
 
