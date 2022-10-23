@@ -35,25 +35,27 @@ auto log_r_term(const R r, const DF df) {
 }
 
 template <typename T>
-auto r_of(const T lat1, const T lon1, const T lat2, const T lon2) {
+auto r_of(const T& lat1, const T& lon1, const T& depth1, const T& lat2, const T& lon2, const T& depth2) {
   T s12 = -999;
   wgs84.Inverse(lat1, lon1, lat2, lon2, s12);
-  return s12 / 1000;  // m -> km
+  s12 /= 1000;                         // m -> km
+  return hypot(s12, depth1 - depth2);  // This is only a crude approximation for a short distance.
 }
 
 int main(int argc, char* argv[]) {
   if (argc > 1) {
     cerr << "{\n"
          << "   echo $B $DF\n"
-         << "   cat catalog.T_M_Lat°_Lon°\n"
+         << "   cat catalog.T_M_Lat°_Lon°_DepthKm\n"
          << "} | " << argv[0] << " > distance.j_i_logηij_logTij_logRij_logMi_and_more"
          << endl;
     exit(1);
   }
-  cout.setf(ios_base::scientific, ios_base::floatfield);
-  cout.precision(numeric_limits<double>::max_digits10);
-  cerr.setf(ios_base::scientific, ios_base::floatfield);
-  cerr.precision(numeric_limits<double>::max_digits10);
+  ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+  cout.precision(std::numeric_limits<double>::max_digits10);
+  cerr.precision(std::numeric_limits<double>::max_digits10);
+  clog.precision(std::numeric_limits<double>::max_digits10);
 
   // read params
   double b, df;
@@ -65,21 +67,24 @@ int main(int argc, char* argv[]) {
   }
 
   // read data
-  vector<double> ts, ms, lats, lons;
-  string line;
-  for (string line; getline(cin, line);) {
-    istringstream iss(line);
-    double t, m, lat, lon;
-    iss >> t >> m >> lat >> lon;
-    assert((-90 <= lat) && (lat <= 90));
-    ts.push_back(t);
-    ms.push_back(m);
-    lats.push_back(lat);
-    lons.push_back(lon);
+  vector<double> ts, ms, lats, lons, depths;
+  {
+    string line;
+    for (; getline(cin, line);) {
+      istringstream iss{line};
+      double t, m, lat, lon, depth;
+      iss >> t >> m >> lat >> lon >> depth;
+      assert((-90 <= lat) && (lat <= 90));
+      ts.push_back(t);
+      ms.push_back(m);
+      lats.push_back(lat);
+      lons.push_back(lon);
+      depths.push_back(depth);
+    }
   }
 
   // output distances
-  for (int j = 1; j < ts.size(); ++j) {
+  for (int j = ts.size() - 1; 0 < j; --j) {
     auto log_etaij_best = numeric_limits<double>::infinity();
     auto log_tij_best = numeric_limits<double>::infinity();
     auto log_rij_best = numeric_limits<double>::infinity();
@@ -91,7 +96,7 @@ int main(int argc, char* argv[]) {
       }
       const auto log_tij = log_t_term(ts[j] - ts[i]);
       const auto log_mi = log_m_term(ms[i], b);
-      const auto log_rij = log_r_term(r_of(lats[i], lons[i], lats[j], lons[j]), df);
+      const auto log_rij = log_r_term(r_of(lats[i], lons[i], depths[i], lats[j], lons[j], depths[j]), df);
       const auto log_etaij = log_tij + log_rij - log_mi;
       if (log_etaij < log_etaij_best) {
         log_etaij_best = log_etaij;
@@ -111,10 +116,12 @@ int main(int argc, char* argv[]) {
          << "\t" << ms[j]
          << "\t" << lats[j]
          << "\t" << lons[j]
+         << "\t" << depths[j]
          << "\t" << ts[i_best]
          << "\t" << ms[i_best]
          << "\t" << lats[i_best]
          << "\t" << lons[i_best]
+         << "\t" << depths[i_best]
          << "\n";
   }
 

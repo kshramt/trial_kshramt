@@ -16,6 +16,7 @@ def main(argv):
     else:
         print(actual, file=sys.stderr)
         print(expected, file=sys.stderr)
+        print(actual - expected, file=sys.stderr)
         exit(1)
 
 

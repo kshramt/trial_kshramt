@@ -77,6 +77,7 @@ work/hs_1981_2016_comb_K4_A.cat_so_SCSN_v2q.tmyx: bin/scec.py cache/hs_1981_2016
 
 .PHONY: check
 check: test/syn.done
+check: test/syn2.done
 test/%.done: bin/allclose.py test/%.out test/%.expect
 	mkdir -p $(@D)
 	$(PYTHON) $^
